@@ -1,5 +1,6 @@
 import pkg from 'pg';
 const { Pool } = pkg;
+import { resolveSpellEffect } from './_lib/effects.js';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -20,6 +21,7 @@ export default async function handler(req, res) {
     if (match.status !== 'PLAYING') throw new Error('Match is over');
 
     let state = match.state;
+    if (!state.graveyard) state.graveyard = [];
     
     if (action === 'END_TURN') {
       match.active_player = match.active_player === match.player1 ? match.player2 : match.player1;
@@ -52,8 +54,18 @@ export default async function handler(req, res) {
         state.log.unshift(`Player ${player} dealt ${damage} damage to ${state.battlefield[targetIndex].name}!`);
         if (state.battlefield[targetIndex].currentHealth <= 0) {
           state.log.unshift(`${state.battlefield[targetIndex].name} was destroyed!`);
-          state.battlefield.splice(targetIndex, 1);
+          const [dead] = state.battlefield.splice(targetIndex, 1);
+          state.graveyard.push(dead);
         }
+      }
+    } else if (action === 'CAST_SPELL') {
+      const { card, targetId } = payload;
+      const { logs, matchOver } = resolveSpellEffect({ state, player, card, targetId });
+      state.graveyard.push({ id: card.id, name: card.name, card_type: card.card_type, owner: player });
+      logs.forEach(l => state.log.unshift(l));
+      if (matchOver) {
+        match.status = matchOver;
+        state.log.unshift(`MATCH OVER! ${match.status}!`);
       }
     } else if (action === 'SURRENDER') {
       match.status = player === 1 ? 'PLAYER 2 WINS' : 'PLAYER 1 WINS';

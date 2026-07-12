@@ -19,10 +19,23 @@ function EntityDropZone({ id, children }: { id: string, children: React.ReactNod
   );
 }
 
-const getSpellDamage = (card: any) => {
-  if (card.card_type !== 'Spell') return 0;
-  const match = card.description?.match(/Deal (\d+)/i);
-  return match ? parseInt(match[1]) : 3;
+// Draw/energy effects only make sense client-side, since hand and energy
+// aren't tracked in the server's authoritative match state.
+const getClientOnlyEffects = (card: any) => {
+  const desc = card.description || '';
+  const drawMatch = desc.match(/draw\s+(a card|\d+\s+cards?)/i);
+  const energyMatch = desc.match(/gain\s+(\d+)\s+energy/i);
+  return {
+    draw: drawMatch ? (drawMatch[1].startsWith('a') ? 1 : parseInt(drawMatch[1])) : 0,
+    energy: energyMatch ? parseInt(energyMatch[1]) : 0,
+  };
+}
+
+// A spell "requires a target" if its text talks about an entity/creature —
+// otherwise it can be cast by dropping it on your own battlefield with no target.
+const spellRequiresEntityTarget = (card: any) => {
+  const desc = card.description || '';
+  return /target (entity|creature)|enemy (entity|creature)|an ally|allied (entity|creature)/i.test(desc);
 }
 
 export default function GameEngine() {
@@ -61,6 +74,8 @@ export default function GameEngine() {
   
   const [opponentBattlefield, setOpponentBattlefield] = useState<any[]>([]);
   const [opponentResonance, setOpponentResonance] = useState<any[]>([]);
+  const [graveyard, setGraveyard] = useState<any[]>([]);
+  const [opponentGraveyard, setOpponentGraveyard] = useState<any[]>([]);
 
   const [energy, setEnergy] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -155,6 +170,10 @@ export default function GameEngine() {
           setResonanceRow(state.resonanceRow.filter((c: any) => c.owner === playerNum));
           setOpponentResonance(state.resonanceRow.filter((c: any) => c.owner !== playerNum));
         }
+        if (state.graveyard) {
+          setGraveyard(state.graveyard.filter((c: any) => c.owner === playerNum));
+          setOpponentGraveyard(state.graveyard.filter((c: any) => c.owner !== playerNum));
+        }
       } catch (err) {
         console.error(err);
       }
@@ -243,8 +262,25 @@ export default function GameEngine() {
     if (hand.find(c => c.id === card.id)) {
       if (over.id === 'battlefield') {
         if (card.card_type === 'Spell') {
-           setTurnLog(prev => [`Spells must be dropped directly on a valid target!`, ...prev]);
-           return;
+          if (spellRequiresEntityTarget(card)) {
+            setTurnLog(prev => [`${card.name} needs a target — drop it on an entity or the enemy Vanguard.`, ...prev]);
+            return;
+          }
+          if (energy < card.cost) {
+            setTurnLog(prev => [`Not enough energy to cast ${card.name}.`, ...prev]);
+            return;
+          }
+          setHand(hand.filter(c => c.id !== card.id));
+          setEnergy(e => e - card.cost);
+          await sendAction('CAST_SPELL', { card, targetId: null });
+          const { draw, energy: energyGain } = getClientOnlyEffects(card);
+          if (draw > 0 && deckIndex < fullDeck.length) {
+            const drawn = fullDeck.slice(deckIndex, deckIndex + draw);
+            setHand(prev => [...prev, ...drawn]);
+            setDeckIndex(d => d + drawn.length);
+          }
+          if (energyGain > 0) setEnergy(e => e + energyGain);
+          return;
         }
         if (energy >= card.cost) {
           setHand(hand.filter(c => c.id !== card.id));
@@ -259,16 +295,26 @@ export default function GameEngine() {
         setEnergy(e => e + 1);
         setHasResonatedThisTurn(true);
         await sendAction('PLAY_CARD', { zone: 'resonanceRow', card });
-      } else if (over.id === 'opponent_vanguard' || opponentBattlefield.find(c => c.id === over.id)) {
-        if (card.card_type === 'Spell' && energy >= card.cost) {
+      } else if (
+        over.id === 'opponent_vanguard' ||
+        opponentBattlefield.find(c => c.id === over.id) ||
+        battlefield.find(c => c.id === over.id)
+      ) {
+        if (card.card_type === 'Spell') {
+          if (energy < card.cost) {
+            setTurnLog(prev => [`Not enough energy to cast ${card.name}.`, ...prev]);
+            return;
+          }
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
-          const dmg = getSpellDamage(card);
-          if (over.id === 'opponent_vanguard') {
-            await sendAction('ATTACK_VANGUARD', { power: dmg });
-          } else {
-            await sendAction('ATTACK_ENTITY', { targetId: over.id, power: dmg });
+          await sendAction('CAST_SPELL', { card, targetId: over.id as string });
+          const { draw, energy: energyGain } = getClientOnlyEffects(card);
+          if (draw > 0 && deckIndex < fullDeck.length) {
+            const drawn = fullDeck.slice(deckIndex, deckIndex + draw);
+            setHand(prev => [...prev, ...drawn]);
+            setDeckIndex(d => d + drawn.length);
           }
+          if (energyGain > 0) setEnergy(e => e + energyGain);
         }
       }
     } 
@@ -408,6 +454,13 @@ export default function GameEngine() {
                   <p className="text-sm text-slate-400 font-mono">{opponentHp} Nexus HP</p>
                 </div>
               </div>
+              <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800">
+                <img src="/baked_cardback.png" className="w-6 h-8 rounded object-cover opacity-60 grayscale" />
+                <div className="text-left">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Graveyard</p>
+                  <p className="text-sm text-slate-300 font-mono font-bold">{opponentGraveyard.length}</p>
+                </div>
+              </div>
             </div>
           </DropZone>
 
@@ -463,19 +516,21 @@ export default function GameEngine() {
         <div className="flex flex-col gap-4">
           <DropZone id="battlefield" title="Your Battlefield">
             {battlefield.map(c => (
-              <div key={c.id} className="animate-in slide-in-from-bottom-8 fade-in zoom-in-75 duration-500 relative">
-                <Card {...c} health={c.currentHealth ?? c.health} />
-                {attackedThisTurn.includes(c.id) && (
-                   <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center border-2 border-slate-800 pointer-events-none">
-                     <span className="text-red-500 font-black tracking-widest rotate-[-15deg] bg-black/80 px-2 py-1 rounded">EXHAUSTED</span>
-                   </div>
-                )}
-                {c.turnSummoned === turn && (
-                   <div className="absolute top-2 right-2 bg-slate-800/80 p-1 rounded pointer-events-none">
-                     <span className="text-[10px] text-yellow-400 font-bold">ZzZ</span>
-                   </div>
-                )}
-              </div>
+              <EntityDropZone key={c.id} id={c.id}>
+                <div className="animate-in slide-in-from-bottom-8 fade-in zoom-in-75 duration-500 relative">
+                  <Card {...c} health={c.currentHealth ?? c.health} />
+                  {attackedThisTurn.includes(c.id) && (
+                     <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center border-2 border-slate-800 pointer-events-none">
+                       <span className="text-red-500 font-black tracking-widest rotate-[-15deg] bg-black/80 px-2 py-1 rounded">EXHAUSTED</span>
+                     </div>
+                  )}
+                  {c.turnSummoned === turn && (
+                     <div className="absolute top-2 right-2 bg-slate-800/80 p-1 rounded pointer-events-none">
+                       <span className="text-[10px] text-yellow-400 font-bold">ZzZ</span>
+                     </div>
+                  )}
+                </div>
+              </EntityDropZone>
             ))}
           </DropZone>
 
@@ -519,6 +574,13 @@ export default function GameEngine() {
                 <div>
                   <h3 className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Energy</h3>
                   <p className="text-xl font-black text-yellow-400 font-mono">{energy} / {resonanceRow.length}</p>
+                </div>
+                <div className="ml-auto flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800">
+                  <img src="/baked_cardback.png" className="w-6 h-8 rounded object-cover opacity-60 grayscale" />
+                  <div className="text-left">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Graveyard</p>
+                    <p className="text-sm text-slate-300 font-mono font-bold">{graveyard.length}</p>
+                  </div>
                 </div>
               </div>
 
