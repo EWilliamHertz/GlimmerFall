@@ -9,12 +9,14 @@ import (
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 var db *sql.DB
 
 func initDB() {
+	godotenv.Load() // Load .env file if it exists (for local testing)
 	var err error
 	connStr := os.Getenv("DATABASE_URL")
 	if connStr == "" {
