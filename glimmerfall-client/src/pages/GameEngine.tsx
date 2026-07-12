@@ -1,204 +1,238 @@
 import { useState, useEffect } from 'react'
 import { DndContext, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core'
-import { useWebSocket } from '../WebSocketContext'
 import { DropZone } from '../components/DropZone'
 import { Card } from '../components/Card'
-import { User, ShieldAlert, Zap } from 'lucide-react'
+import { User, ShieldAlert, Zap, Loader2, Swords } from 'lucide-react'
 
 export default function GameEngine() {
-  const { gameState, sendIntent } = useWebSocket()
-  
-  // Interactive Game State
-  const [isPlayerTurn, setIsPlayerTurn] = useState(true)
-  const [energy, setEnergy] = useState(0)
-  const [turn, setTurn] = useState(1)
-  const [playerHp, setPlayerHp] = useState(20)
-  const [opponentHp, setOpponentHp] = useState(20)
-  const [shake, setShake] = useState(false)
-  const [deckIndex, setDeckIndex] = useState(0)
-  const [hasDrawnThisTurn, setHasDrawnThisTurn] = useState(false)
-  const [hasResonatedThisTurn, setHasResonatedThisTurn] = useState(false)
-  const [turnLog, setTurnLog] = useState<string[]>(['Match started! Your turn. Drag a card to the Resonance Row to gain Energy!'])
-  
-  // Local state for demo purposes until backend is fully connected
-  const [hand, setHand] = useState<any[]>([
-    { id: 'c3', name: 'Aether Sprite', cost: 1, power: 1, health: 1, rarity: 'Common' },
-    { id: 'c4', name: 'Solar Flare', cost: 3, card_type: 'Spell', description: 'Deal 3 damage to any target.' }
-  ])
-  const [battlefield, setBattlefield] = useState<any[]>([])
-  const [resonanceRow, setResonanceRow] = useState<any[]>([])
-  const [activeId, setActiveId] = useState<string | null>(null)
-  const [showTutorial, setShowTutorial] = useState(true)
-
-  // Mock Opponent State
-  const [opponentHandCount, setOpponentHandCount] = useState(4)
-  const [opponentBattlefield, setOpponentBattlefield] = useState<any[]>([])
-  const [opponentResonance, setOpponentResonance] = useState<any[]>([])
-
-  // Listen for websocket state updates
-  useEffect(() => {
-    if (gameState && gameState.type === 'BOARD_UPDATE') {
-      setOpponentHandCount(gameState.payload.handCount);
-      setOpponentBattlefield(gameState.payload.battlefield);
-      setOpponentResonance(gameState.payload.resonanceRow);
+  const [username] = useState(() => {
+    let u = localStorage.getItem('glimmerfall_username');
+    if (!u) {
+      u = `Player_${Math.floor(Math.random()*10000)}`;
+      localStorage.setItem('glimmerfall_username', u);
     }
-  }, [gameState]);
+    return u;
+  });
+
+  const [matchId, setMatchId] = useState<number | null>(null);
+  const [playerNum, setPlayerNum] = useState<number>(1);
+  const [matchStatus, setMatchStatus] = useState<string>('IDLE');
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Sync State
+  const [turn, setTurn] = useState(1);
+  const [activePlayer, setActivePlayer] = useState<string>('');
+  const [playerHp, setPlayerHp] = useState(20);
+  const [opponentHp, setOpponentHp] = useState(20);
+  const [turnLog, setTurnLog] = useState<string[]>([]);
+  
+  const [hand, setHand] = useState<any[]>([
+    { id: 'c3', name: 'Aether Sprite', cost: 1, power: 1, health: 1, rarity: 'Common', card_type: 'Entity' },
+    { id: 'c4', name: 'Solar Flare', cost: 3, card_type: 'Spell', description: 'Deal 3 damage to any target.' },
+    { id: 'c5', name: 'Dawnblade Templar', cost: 4, power: 5, health: 4, rarity: 'Rare', card_type: 'Entity' }
+  ]);
+  const [deckIndex, setDeckIndex] = useState(0);
+
+  const [battlefield, setBattlefield] = useState<any[]>([]);
+  const [resonanceRow, setResonanceRow] = useState<any[]>([]);
+  
+  const [opponentBattlefield, setOpponentBattlefield] = useState<any[]>([]);
+  const [opponentResonance, setOpponentResonance] = useState<any[]>([]);
+
+  const [energy, setEnergy] = useState(0);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [shake, setShake] = useState(false);
+  const [hasDrawnThisTurn, setHasDrawnThisTurn] = useState(false);
+  const [hasResonatedThisTurn, setHasResonatedThisTurn] = useState(false);
+
+  const isPlayerTurn = matchStatus === 'PLAYING' && activePlayer === username;
+
+  // Poll Match State
+  useEffect(() => {
+    if (!matchId) return;
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/match?id=${matchId}`);
+        const data = await res.json();
+        if (data.error) return;
+        
+        setMatchStatus(data.status);
+        setActivePlayer(data.active_player);
+        setTurn(data.current_turn);
+        
+        const state = data.state || {};
+        if (playerNum === 1) {
+          setPlayerHp(state.player1_hp);
+          setOpponentHp(state.player2_hp);
+        } else {
+          setPlayerHp(state.player2_hp);
+          setOpponentHp(state.player1_hp);
+        }
+
+        if (state.log) setTurnLog(state.log);
+
+        if (state.battlefield) {
+          setBattlefield(state.battlefield.filter((c: any) => c.owner === playerNum));
+          setOpponentBattlefield(state.battlefield.filter((c: any) => c.owner !== playerNum));
+        }
+        if (state.resonanceRow) {
+          setResonanceRow(state.resonanceRow.filter((c: any) => c.owner === playerNum));
+          setOpponentResonance(state.resonanceRow.filter((c: any) => c.owner !== playerNum));
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [matchId, playerNum]);
+
+  // Reset energy on turn start
+  useEffect(() => {
+    if (isPlayerTurn) {
+      setEnergy(resonanceRow.length);
+      setHasDrawnThisTurn(false);
+      setHasResonatedThisTurn(false);
+    }
+  }, [activePlayer, isPlayerTurn]);
+
+  const findDuel = async () => {
+    setIsSearching(true);
+    try {
+      const res = await fetch('/api/matchmaking', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username })
+      });
+      const data = await res.json();
+      setMatchId(data.matchId);
+      setPlayerNum(data.player);
+      setMatchStatus(data.status || 'PLAYING');
+      if (data.player === 1) {
+        setActivePlayer(username); // P1 starts
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const sendAction = async (action: string, payload: any = {}) => {
+    await fetch('/api/action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ matchId, player: playerNum, action, payload })
+    });
+    // Optimistically fetch state immediately
+    const res = await fetch(`/api/match?id=${matchId}`);
+    const data = await res.json();
+    setActivePlayer(data.active_player);
+    const state = data.state || {};
+    if (playerNum === 1) {
+      setPlayerHp(state.player1_hp);
+      setOpponentHp(state.player2_hp);
+    } else {
+      setPlayerHp(state.player2_hp);
+      setOpponentHp(state.player1_hp);
+    }
+    if (state.log) setTurnLog(state.log);
+  };
 
   const handleDragStart = (event: DragStartEvent) => {
-    setActiveId(event.active.id as string)
+    if (!isPlayerTurn) return;
+    setActiveId(event.active.id as string);
   }
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    setActiveId(null)
-    const { active, over } = event
-    if (!over) return
+  const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null);
+    if (!isPlayerTurn) return;
+    const { active, over } = event;
+    if (!over) return;
 
-    const card = hand.find(c => c.id === active.id) || battlefield.find(c => c.id === active.id)
-    if (!card) return
-
-    let newHand = [...hand];
-    let newBattlefield = [...battlefield];
-    let newResonance = [...resonanceRow];
-    let newEnergy = energy;
-    let newOpponentHp = opponentHp;
+    const card = hand.find(c => c.id === active.id) || battlefield.find(c => c.id === active.id);
+    if (!card) return;
 
     // Play from Hand
     if (hand.find(c => c.id === card.id)) {
       if (over.id === 'battlefield') {
-        if (card.card_type === 'Spell') {
-          setTurnLog(prev => [`Spells cannot be played on the Battlefield. Drag them to a valid target!`, ...prev]);
-          return;
-        }
+        if (card.card_type === 'Spell') return;
         if (energy >= card.cost) {
-          newHand = newHand.filter(c => c.id !== card.id);
-          newBattlefield.push(card);
-          newEnergy -= card.cost;
-          setTurnLog(prev => [`You summoned ${card.name}.`, ...prev]);
-        } else {
-          setTurnLog(prev => [`Not enough energy to play ${card.name}.`, ...prev]);
-          return;
+          setHand(hand.filter(c => c.id !== card.id));
+          setEnergy(e => e - card.cost);
+          await sendAction('PLAY_CARD', { zone: 'battlefield', card });
         }
       } else if (over.id === 'resonance') {
-        if (hasResonatedThisTurn) {
-          setTurnLog(prev => [`You can only crystallize one card per turn.`, ...prev]);
-          return;
-        }
-        newHand = newHand.filter(c => c.id !== card.id);
-        newResonance.push(card);
-        newEnergy += 1; // Gain energy immediately
+        if (hasResonatedThisTurn) return;
+        setHand(hand.filter(c => c.id !== card.id));
+        setEnergy(e => e + 1);
         setHasResonatedThisTurn(true);
-        setTurnLog(prev => [`You crystallized ${card.name} and gained 1 Energy.`, ...prev]);
+        await sendAction('PLAY_CARD', { zone: 'resonanceRow', card });
       } else if (over.id === 'opponent_vanguard') {
-        if (card.card_type === 'Spell') {
-          if (energy >= card.cost) {
-            newHand = newHand.filter(c => c.id !== card.id);
-            newEnergy -= card.cost;
-            if (card.name === 'Solar Flare') {
-              newOpponentHp -= 3;
-              setTurnLog(prev => [`You cast Solar Flare! It blasted the Vanguard for 3 damage.`, ...prev]);
-              setShake(true);
-              setTimeout(() => setShake(false), 500);
-            } else {
-              setTurnLog(prev => [`You cast ${card.name}!`, ...prev]);
-            }
-            if (newOpponentHp <= 0) {
-              setTurnLog(prev => [`VICTORY! You have shattered the enemy Vanguard!`, ...prev]);
-            }
-          } else {
-            setTurnLog(prev => [`Not enough energy to cast ${card.name}.`, ...prev]);
-            return;
-          }
-        } else {
-          setTurnLog(prev => [`You must play Entities to the Battlefield first!`, ...prev]);
-          return;
+        if (card.card_type === 'Spell' && energy >= card.cost) {
+          setHand(hand.filter(c => c.id !== card.id));
+          setEnergy(e => e - card.cost);
+          await sendAction('ATTACK_VANGUARD', { power: 3 }); // Hardcoded for spell MVP
         }
       }
     } 
     // Attack from Battlefield
     else if (battlefield.find(c => c.id === card.id)) {
       if (over.id === 'opponent_vanguard') {
-        if (!card.power) {
-          setTurnLog(prev => [`${card.name} cannot attack.`, ...prev]);
-          return;
-        }
-        newOpponentHp -= card.power;
-        setTurnLog(prev => [`${card.name} attacked the Vanguard for ${card.power} damage!`, ...prev]);
-        
-        if (newOpponentHp <= 0) {
-          setTurnLog(prev => [`VICTORY! You have shattered the enemy Vanguard!`, ...prev]);
-        }
+        if (!card.power) return;
+        await sendAction('ATTACK_VANGUARD', { power: card.power });
       }
     }
-
-    setHand(newHand);
-    setBattlefield(newBattlefield);
-    setResonanceRow(newResonance);
-    setEnergy(newEnergy);
-    setOpponentHp(newOpponentHp);
-
-    // Broadcast our updated state to the opponent
-    sendIntent('BOARD_UPDATE', {
-      handCount: newHand.length,
-      battlefield: newBattlefield,
-      resonanceRow: newResonance
-    });
   }
 
-  const passTurn = () => {
-    setIsPlayerTurn(false)
-    setTurnLog(prev => ['You passed the turn.', ...prev])
-    
-    // Simulate scripted opponent turn
-    setTimeout(() => {
-      if (turn === 1) {
-        setTurnLog(prev => ['Opponent played Void Stalker and passed.', ...prev])
-        setOpponentBattlefield(prev => [...prev, { id: 'opp_c1', name: 'Void Stalker', cost: 2, power: 3, health: 2, rarity: 'Uncommon', card_type: 'Entity' }])
-      } else if (turn === 2) {
-        setTurnLog(prev => ['Opponent attacked with Void Stalker! You take 3 damage.', ...prev])
-        setPlayerHp(hp => hp - 3);
-        setShake(true);
-        setTimeout(() => setShake(false), 500);
-      } else {
-        setTurnLog(prev => ['Opponent is intimidated and passed.', ...prev])
-      }
-
-      setIsPlayerTurn(true)
-      setHasDrawnThisTurn(false)
-      setHasResonatedThisTurn(false)
-      setTurn(t => t + 1)
-      
-      const newEnergy = resonanceRow.length;
-      setEnergy(newEnergy) 
-
-      // Scripted draw
-      if (turn === 1) {
-        setHand(prev => [...prev, { id: 'c2', name: 'Dawnblade Templar', cost: 4, power: 5, health: 4, rarity: 'Rare', card_type: 'Entity', description: 'A holy warrior.' }])
-        setTurnLog(prev => [`Turn 2 begins. You drew Dawnblade Templar! Energy: ${newEnergy}.`, ...prev])
-      } else if (turn === 2) {
-        setHand(prev => [...prev, { id: 'c1', name: 'Gaia, The World-Soul', cost: 7, power: 8, health: 8, rarity: 'Mythic', card_type: 'Entity', description: 'The planet incarnate.' }])
-        setTurnLog(prev => [`Turn 3 begins. You drew Gaia! Energy: ${newEnergy}.`, ...prev])
-      } else {
-        setTurnLog(prev => [`Turn ${turn + 1} begins. Energy: ${newEnergy}.`, ...prev])
-      }
-    }, 2000)
+  const passTurn = async () => {
+    await sendAction('END_TURN');
   }
 
   const drawCard = () => {
-    if (hasDrawnThisTurn) return;
+    if (hasDrawnThisTurn || !isPlayerTurn) return;
     const possibleDraws = [
-      { id: 'd1', name: 'Eclipse Ritual', cost: 5, power: 5, health: 5, rarity: 'Epic', card_type: 'Entity', description: 'Draw mechanic.' },
-      { id: 'd2', name: 'Gilded Pegasus', cost: 3, power: 3, health: 4, rarity: 'Rare', card_type: 'Entity', description: 'Draw mechanic.' },
-      { id: 'd3', name: 'Crypt Lantern', cost: 2, power: 1, health: 3, rarity: 'Common', card_type: 'Entity', description: 'Draw mechanic.' },
-      { id: 'd4', name: 'Sunfire Colossus', cost: 8, power: 9, health: 9, rarity: 'Mythic', card_type: 'Entity', description: 'Draw mechanic.' }
+      { id: 'd1'+Math.random(), name: 'Eclipse Ritual', cost: 5, power: 5, health: 5, rarity: 'Epic', card_type: 'Entity' },
+      { id: 'd2'+Math.random(), name: 'Gilded Pegasus', cost: 3, power: 3, health: 4, rarity: 'Rare', card_type: 'Entity' }
     ];
-    if (deckIndex < possibleDraws.length) {
-      setHand(prev => [...prev, possibleDraws[deckIndex]]);
-      setDeckIndex(d => d + 1);
-      setHasDrawnThisTurn(true);
-      setTurnLog(prev => [`You manually drew ${possibleDraws[deckIndex].name}.`, ...prev]);
-    } else {
-      setTurnLog(prev => [`Your deck is empty!`, ...prev]);
-    }
+    setHand(prev => [...prev, possibleDraws[deckIndex % 2]]);
+    setDeckIndex(d => d + 1);
+    setHasDrawnThisTurn(true);
+  }
+
+  if (matchStatus === 'IDLE' || matchStatus === 'WAITING') {
+    return (
+      <div className="min-h-full bg-slate-950 flex flex-col items-center justify-center p-8">
+        <div className="bg-slate-900 border-2 border-cyan-500 p-8 rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.5)] max-w-md w-full text-center">
+          <h2 className="text-3xl font-black text-cyan-400 mb-2">PvP Arena</h2>
+          <p className="text-slate-400 mb-8 font-mono">Logged in as: {username}</p>
+          
+          {matchStatus === 'WAITING' ? (
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="w-12 h-12 text-cyan-500 animate-spin" />
+              <p className="text-cyan-300 font-bold tracking-widest animate-pulse">SEARCHING FOR OPPONENT...</p>
+            </div>
+          ) : (
+            <button 
+              onClick={findDuel}
+              disabled={isSearching}
+              className="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xl rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.6)] hover:scale-105 flex items-center justify-center gap-3"
+            >
+              <Swords className="w-6 h-6" />
+              FIND DUEL
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (matchStatus.includes('WINS')) {
+    return (
+      <div className="min-h-full bg-slate-950 flex items-center justify-center p-8">
+        <div className="bg-slate-900 border-2 border-yellow-500 p-12 rounded-2xl shadow-[0_0_100px_rgba(234,179,8,0.5)] text-center">
+          <h1 className="text-6xl font-black text-yellow-400 mb-4">{matchStatus}</h1>
+          <button onClick={() => window.location.reload()} className="mt-8 px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-700">Play Again</button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -216,24 +250,8 @@ export default function GameEngine() {
       `}</style>
       <div className={`min-h-full bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] bg-slate-950 flex flex-col justify-between p-4 lg:p-8 transition-colors duration-100 ${shake ? 'animate-shake bg-red-950' : ''}`}>
         
-        {/* Tutorial Modal */}
-        {showTutorial && (
-          <div className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm animate-in fade-in duration-300">
-            <div className="max-w-md w-full bg-slate-900 border-2 border-cyan-500 p-6 rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.5)] animate-in zoom-in-95 duration-500">
-              <h2 className="text-2xl font-black text-cyan-400 mb-4">Tutorial: The Arena</h2>
-              <ul className="space-y-3 text-slate-300 mb-6">
-                <li><strong className="text-cyan-300">1. Resonating:</strong> Drag a card from your hand to the Resonance Row (the blue dropzone) to use it as a Node. Nodes generate Energy each turn.</li>
-                <li><strong className="text-cyan-300">2. Deploying:</strong> Drag a card to the Battlefield to summon an Entity. It costs Energy equal to the top right number.</li>
-                <li><strong className="text-cyan-300">3. Attacking:</strong> Entities have "summoning sickness" the turn they are played. Next turn, you can drag them to attack the Enemy Vanguard (their Nexus HP) or their Entities!</li>
-              </ul>
-              <button onClick={() => setShowTutorial(false)} className="w-full py-3 bg-cyan-600 hover:bg-cyan-500 text-white font-bold rounded-lg transition-colors">Start Duel</button>
-            </div>
-          </div>
-        )}
-        
         {/* Opponent Area (Top) */}
         <div className="flex flex-col gap-4">
-          {/* Opponent Info & Hand */}
           <DropZone id="opponent_vanguard" title="">
             <div className={`flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border ${activeId && battlefield.find(c=>c.id===activeId) ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]' : 'border-red-900/30'} shadow-[0_0_30px_rgba(220,38,38,0.05)] transition-all w-full`}>
               <div className="flex items-center gap-4">
@@ -245,15 +263,7 @@ export default function GameEngine() {
                   <p className="text-sm text-slate-400 font-mono">{opponentHp} Nexus HP</p>
                 </div>
               </div>
-              
-              <div className="flex gap-[-40px]">
-              {Array.from({ length: opponentHandCount }).map((_, i) => (
-                <div key={i} className="w-24 h-[134px] rounded-lg -ml-12 shadow-[0_0_15px_rgba(0,0,0,0.8)] border-2 border-slate-700 relative overflow-hidden transform hover:-translate-y-2 transition-transform z-10 hover:z-20">
-                  <img src="/baked_cardback.png" className="absolute inset-0 w-full h-full object-cover" alt="Cardback" />
-                </div>
-              ))}
             </div>
-          </div>
           </DropZone>
 
           {/* Opponent Resonance Row */}
@@ -304,7 +314,6 @@ export default function GameEngine() {
 
         {/* Player Area (Bottom) */}
         <div className="flex flex-col gap-4">
-          {/* Player Battlefield */}
           <DropZone id="battlefield" title="Your Battlefield">
             {battlefield.map(c => (
               <div key={c.id} className="animate-in slide-in-from-bottom-8 fade-in zoom-in-75 duration-500">
@@ -313,7 +322,6 @@ export default function GameEngine() {
             ))}
           </DropZone>
 
-          {/* Player Resonance Row */}
           <DropZone id="resonance" title="Your Resonance Row (Drag here to play as Node)">
             {resonanceRow.map(c => (
               <div key={c.id} className="w-24 h-24 rounded-full relative overflow-hidden border-2 border-cyan-400 shadow-[0_0_20px_rgba(6,182,212,0.6)] animate-in spin-in-12 duration-500">
@@ -326,7 +334,6 @@ export default function GameEngine() {
             ))}
           </DropZone>
 
-          {/* Player Info & Hand */}
           <div className="flex flex-col xl:flex-row justify-between items-end mt-4 gap-6">
             <div className="flex flex-col gap-2 shrink-0 w-64">
               <div className="flex items-center gap-4 bg-slate-900/80 p-4 rounded-xl border border-cyan-900/50 shadow-[0_0_30px_rgba(6,182,212,0.1)]">
@@ -334,7 +341,7 @@ export default function GameEngine() {
                   <User className="w-8 h-8" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-cyan-400 text-xl">You</h3>
+                  <h3 className="font-bold text-cyan-400 text-xl">{username}</h3>
                   <p className="text-sm text-cyan-600 font-mono font-bold">{playerHp} Nexus HP</p>
                 </div>
               </div>
@@ -350,7 +357,6 @@ export default function GameEngine() {
 
               {/* Combat Log */}
               <div className="h-24 bg-slate-950 rounded-lg border border-slate-800 p-2 overflow-y-auto mt-2">
-                <h4 className="text-[10px] text-slate-500 uppercase font-bold tracking-widest mb-1 border-b border-slate-800 pb-1">Combat Log</h4>
                 <div className="flex flex-col gap-1">
                   {turnLog.map((log, i) => (
                     <span key={i} className={`text-xs ${i === 0 ? 'text-cyan-300' : 'text-slate-600'}`}>{log}</span>
@@ -366,16 +372,15 @@ export default function GameEngine() {
                   <Card {...c} />
                 </div>
               ))}
-              {hand.length === 0 && deckIndex >= 4 && <span className="text-slate-600 m-auto font-bold tracking-widest">HAND IS EMPTY</span>}
               <button 
                 onClick={drawCard}
-                disabled={deckIndex >= 4 || hasDrawnThisTurn || !isPlayerTurn}
+                disabled={hasDrawnThisTurn || !isPlayerTurn}
                 className={`ml-8 w-24 h-[134px] bg-slate-800 rounded-lg border-2 border-slate-700 flex flex-col items-center justify-center text-slate-400 hover:border-cyan-500 hover:text-cyan-400 transition-colors shadow-[0_0_15px_rgba(0,0,0,0.8)] cursor-pointer group shrink-0 relative overflow-hidden disabled:opacity-50 disabled:cursor-not-allowed`}
               >
                 <img src="/baked_cardback.png" className="absolute inset-0 w-full h-full object-cover group-hover:opacity-70 transition-opacity" alt="Deck" />
                 <div className="relative z-10 flex flex-col items-center bg-black/60 w-full py-2">
                   <div className="font-black tracking-widest text-sm mb-1 text-white">DECK</div>
-                  <div className="text-[10px] text-cyan-300 font-bold">{4 - deckIndex} CARDS LEFT</div>
+                  <div className="text-[10px] text-cyan-300 font-bold">DRAW</div>
                 </div>
               </button>
             </div>
