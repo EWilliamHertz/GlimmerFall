@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { DndContext, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core'
+import { DndContext, type DragEndEvent, type DragStartEvent, DragOverlay, useDroppable } from '@dnd-kit/core'
 import { DropZone } from '../components/DropZone'
 import { Card } from '../components/Card'
 import { User, ShieldAlert, Zap, Loader2, Swords, Book } from 'lucide-react'
@@ -7,6 +7,22 @@ import { Link } from 'react-router-dom'
 
 // Helper to generate unique ids
 const generateId = (prefix: string) => `${prefix}_${Math.random().toString(36).substr(2, 9)}`;
+
+// Custom dropzone for targeting opponent entities
+function EntityDropZone({ id, children }: { id: string, children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <div ref={setNodeRef} className={`relative rounded-xl transition-all ${isOver ? 'ring-4 ring-red-500 scale-105 shadow-[0_0_30px_rgba(239,68,68,0.8)] z-10' : ''}`}>
+      {children}
+    </div>
+  );
+}
+
+const getSpellDamage = (card: any) => {
+  if (card.card_type !== 'Spell') return 0;
+  const match = card.description?.match(/Deal (\d+)/i);
+  return match ? parseInt(match[1]) : 3;
+}
 
 export default function GameEngine() {
   const [username, setUsername] = useState(() => {
@@ -23,6 +39,10 @@ export default function GameEngine() {
   const [matchStatus, setMatchStatus] = useState<string>('IDLE');
   const [isSearching, setIsSearching] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Deck Selection
+  const [userDecks, setUserDecks] = useState<any[]>([]);
+  const [activeDeckName, setActiveDeckName] = useState<string>(localStorage.getItem('glimmerfall_active_deck') || "Nature's Wrath");
 
   // Sync State
   const [turn, setTurn] = useState(1);
@@ -49,10 +69,20 @@ export default function GameEngine() {
 
   const isPlayerTurn = matchStatus === 'PLAYING' && activePlayer === username;
 
-  // Load Active Deck
+  // Load User Decks for Lobby
   useEffect(() => {
-    const activeDeckName = localStorage.getItem('glimmerfall_active_deck') || "Nature's Wrath";
-    if (activeDeckName) {
+    if (matchStatus === 'IDLE' && username && username.trim() !== '') {
+      fetch(`/api/decks?username=${encodeURIComponent(username)}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.decks) setUserDecks(data.decks);
+        }).catch(err => console.error(err));
+    }
+  }, [matchStatus, username]);
+
+  // Load Active Deck into Game
+  useEffect(() => {
+    if (activeDeckName && matchStatus === 'PLAYING') {
       Promise.all([
         fetch(`/api/decks?username=${encodeURIComponent(username)}`).then(r => r.json()),
         fetch('/api/cards').then(r => r.json())
@@ -84,7 +114,7 @@ export default function GameEngine() {
         }
       });
     }
-  }, [username]);
+  }, [matchStatus]);
 
   // Poll Match State
   useEffect(() => {
@@ -137,7 +167,7 @@ export default function GameEngine() {
 
   const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setUsername(e.target.value);
-    localStorage.setItem('glimmerfall_username', e.target.value);
+    localStorage.setItem('glimmerfall_user', e.target.value); // Sync to global username
   }
 
   const findDuel = async () => {
@@ -205,11 +235,16 @@ export default function GameEngine() {
     // Play from Hand
     if (hand.find(c => c.id === card.id)) {
       if (over.id === 'battlefield') {
-        if (card.card_type === 'Spell') return;
+        if (card.card_type === 'Spell') {
+           setTurnLog(prev => [`Spells must be dropped directly on a valid target!`, ...prev]);
+           return;
+        }
         if (energy >= card.cost) {
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
           await sendAction('PLAY_CARD', { zone: 'battlefield', card: { ...card, turnSummoned: turn } });
+        } else {
+           setTurnLog(prev => [`Not enough energy to play ${card.name}.`, ...prev]);
         }
       } else if (over.id === 'resonance') {
         if (hasResonatedThisTurn) return;
@@ -217,29 +252,37 @@ export default function GameEngine() {
         setEnergy(e => e + 1);
         setHasResonatedThisTurn(true);
         await sendAction('PLAY_CARD', { zone: 'resonanceRow', card });
-      } else if (over.id === 'opponent_vanguard') {
+      } else if (over.id === 'opponent_vanguard' || opponentBattlefield.find(c => c.id === over.id)) {
         if (card.card_type === 'Spell' && energy >= card.cost) {
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
-          await sendAction('ATTACK_VANGUARD', { power: 3 }); // Hardcoded for spell MVP
+          const dmg = getSpellDamage(card);
+          if (over.id === 'opponent_vanguard') {
+            await sendAction('ATTACK_VANGUARD', { power: dmg });
+          } else {
+            await sendAction('ATTACK_ENTITY', { targetId: over.id, power: dmg });
+          }
         }
       }
     } 
     // Attack from Battlefield
     else if (battlefield.find(c => c.id === card.id)) {
-      if (over.id === 'opponent_vanguard') {
-        if (!card.power) return;
-        if (card.turnSummoned === turn) {
-           setTurnLog(prev => [`${card.name} has summoning sickness and cannot attack this turn.`, ...prev]);
-           return;
-        }
-        if (attackedThisTurn.includes(card.id)) {
-           setTurnLog(prev => [`${card.name} has already attacked this turn.`, ...prev]);
-           return;
-        }
+      if (!card.power) return;
+      if (card.turnSummoned === turn) {
+         setTurnLog(prev => [`${card.name} has summoning sickness and cannot attack this turn.`, ...prev]);
+         return;
+      }
+      if (attackedThisTurn.includes(card.id)) {
+         setTurnLog(prev => [`${card.name} has already attacked this turn.`, ...prev]);
+         return;
+      }
 
+      if (over.id === 'opponent_vanguard') {
         setAttackedThisTurn(prev => [...prev, card.id]);
         await sendAction('ATTACK_VANGUARD', { power: card.power });
+      } else if (opponentBattlefield.find(c => c.id === over.id)) {
+        setAttackedThisTurn(prev => [...prev, card.id]);
+        await sendAction('ATTACK_ENTITY', { targetId: over.id, power: card.power });
       }
     }
   }
@@ -273,6 +316,20 @@ export default function GameEngine() {
                   onChange={handleUsernameChange}
                   className="w-full bg-slate-800 border border-slate-700 text-white rounded p-3 focus:border-cyan-400 outline-none transition-colors"
                 />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-1 block">Select Deck</label>
+                <select 
+                  value={activeDeckName} 
+                  onChange={e => { setActiveDeckName(e.target.value); localStorage.setItem('glimmerfall_active_deck', e.target.value); }}
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded p-3 focus:border-cyan-400 outline-none transition-colors"
+                >
+                  <option value="Nature's Wrath">Nature's Wrath (Starter)</option>
+                  <option value="Cinder Ignition">Cinder Ignition (Starter)</option>
+                  {userDecks.map(d => (
+                    <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-1 block">Lobby Code (Optional)</label>
@@ -334,7 +391,7 @@ export default function GameEngine() {
         {/* Opponent Area (Top) */}
         <div className="flex flex-col gap-4">
           <DropZone id="opponent_vanguard" title="">
-            <div className={`flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border ${activeId && battlefield.find(c=>c.id===activeId) ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]' : 'border-red-900/30'} shadow-[0_0_30px_rgba(220,38,38,0.05)] transition-all w-full`}>
+            <div className={`flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border ${activeId && (hand.find(c=>c.id===activeId)?.card_type==='Spell' || battlefield.find(c=>c.id===activeId)) ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]' : 'border-red-900/30'} shadow-[0_0_30px_rgba(220,38,38,0.05)] transition-all w-full`}>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-red-950 border border-red-800 rounded-lg flex items-center justify-center text-red-500 shadow-[0_0_15px_rgba(220,38,38,0.2)]">
                   <ShieldAlert className="w-7 h-7" />
@@ -360,11 +417,13 @@ export default function GameEngine() {
           </div>
 
           {/* Opponent Battlefield */}
-          <div className="w-full bg-red-900/10 border border-red-900/30 rounded-xl min-h-[180px] p-4 flex gap-4 overflow-x-auto">
+          <div className="w-full bg-red-900/10 border border-red-900/30 rounded-xl min-h-[180px] p-4 flex gap-4 overflow-x-auto relative z-10">
             {opponentBattlefield.map(c => (
-              <div key={c.id} className="animate-in slide-in-from-top-8 fade-in zoom-in-75 duration-500">
-                <Card {...c} />
-              </div>
+              <EntityDropZone key={c.id} id={c.id}>
+                <div className="animate-in slide-in-from-top-8 fade-in zoom-in-75 duration-500 relative cursor-crosshair">
+                  <Card {...c} health={c.currentHealth ?? c.health} />
+                </div>
+              </EntityDropZone>
             ))}
           </div>
         </div>
@@ -398,14 +457,14 @@ export default function GameEngine() {
           <DropZone id="battlefield" title="Your Battlefield">
             {battlefield.map(c => (
               <div key={c.id} className="animate-in slide-in-from-bottom-8 fade-in zoom-in-75 duration-500 relative">
-                <Card {...c} />
+                <Card {...c} health={c.currentHealth ?? c.health} />
                 {attackedThisTurn.includes(c.id) && (
-                   <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center border-2 border-slate-800">
-                     <span className="text-red-500 font-black tracking-widest rotate-[-15deg]">EXHAUSTED</span>
+                   <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center border-2 border-slate-800 pointer-events-none">
+                     <span className="text-red-500 font-black tracking-widest rotate-[-15deg] bg-black/80 px-2 py-1 rounded">EXHAUSTED</span>
                    </div>
                 )}
                 {c.turnSummoned === turn && (
-                   <div className="absolute top-2 right-2 bg-slate-800/80 p-1 rounded">
+                   <div className="absolute top-2 right-2 bg-slate-800/80 p-1 rounded pointer-events-none">
                      <span className="text-[10px] text-yellow-400 font-bold">ZzZ</span>
                    </div>
                 )}
@@ -472,6 +531,7 @@ export default function GameEngine() {
                 <div className="relative z-10 flex flex-col items-center bg-black/60 w-full py-2">
                   <div className="font-black tracking-widest text-sm mb-1 text-white">DECK</div>
                   <div className="text-[10px] text-cyan-300 font-bold">DRAW</div>
+                  <div className="text-[9px] text-slate-400 font-bold mt-1">{fullDeck.length - deckIndex} Left</div>
                 </div>
               </button>
             </div>

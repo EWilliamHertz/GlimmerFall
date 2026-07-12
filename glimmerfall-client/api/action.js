@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     } else if (action === 'PLAY_CARD') {
       // payload = { zone: 'battlefield' or 'resonanceRow', card: {} }
       if (payload.zone === 'battlefield') {
-        state.battlefield.push({ ...payload.card, owner: player });
+        state.battlefield.push({ ...payload.card, owner: player, currentHealth: payload.card.health });
         state.log.unshift(`Player ${player} summoned ${payload.card.name}.`);
       } else {
         state.resonanceRow.push({ ...payload.card, owner: player });
@@ -43,6 +43,17 @@ export default async function handler(req, res) {
       if (state.player1_hp <= 0 || state.player2_hp <= 0) {
         match.status = state.player1_hp <= 0 ? 'PLAYER 2 WINS' : 'PLAYER 1 WINS';
         state.log.unshift(`MATCH OVER! ${match.status}!`);
+      }
+    } else if (action === 'ATTACK_ENTITY') {
+      const damage = payload.power;
+      const targetIndex = state.battlefield.findIndex(c => c.id === payload.targetId);
+      if (targetIndex !== -1) {
+        state.battlefield[targetIndex].currentHealth -= damage;
+        state.log.unshift(`Player ${player} dealt ${damage} damage to ${state.battlefield[targetIndex].name}!`);
+        if (state.battlefield[targetIndex].currentHealth <= 0) {
+          state.log.unshift(`${state.battlefield[targetIndex].name} was destroyed!`);
+          state.battlefield.splice(targetIndex, 1);
+        }
       }
     }
 
