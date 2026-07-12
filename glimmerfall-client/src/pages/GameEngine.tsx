@@ -4,8 +4,11 @@ import { DropZone } from '../components/DropZone'
 import { Card } from '../components/Card'
 import { User, ShieldAlert, Zap, Loader2, Swords } from 'lucide-react'
 
+// Helper to generate unique ids
+const generateId = (prefix: string) => `${prefix}_${Math.random().toString(36).substr(2, 9)}`;
+
 export default function GameEngine() {
-  const [username] = useState(() => {
+  const [username, setUsername] = useState(() => {
     let u = localStorage.getItem('glimmerfall_username');
     if (!u) {
       u = `Player_${Math.floor(Math.random()*10000)}`;
@@ -13,11 +16,13 @@ export default function GameEngine() {
     }
     return u;
   });
-
+  
+  const [lobbyCode, setLobbyCode] = useState('');
   const [matchId, setMatchId] = useState<number | null>(null);
   const [playerNum, setPlayerNum] = useState<number>(1);
   const [matchStatus, setMatchStatus] = useState<string>('IDLE');
   const [isSearching, setIsSearching] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   // Sync State
   const [turn, setTurn] = useState(1);
@@ -27,9 +32,9 @@ export default function GameEngine() {
   const [turnLog, setTurnLog] = useState<string[]>([]);
   
   const [hand, setHand] = useState<any[]>([
-    { id: 'c3', name: 'Aether Sprite', cost: 1, power: 1, health: 1, rarity: 'Common', card_type: 'Entity' },
-    { id: 'c4', name: 'Solar Flare', cost: 3, card_type: 'Spell', description: 'Deal 3 damage to any target.' },
-    { id: 'c5', name: 'Dawnblade Templar', cost: 4, power: 5, health: 4, rarity: 'Rare', card_type: 'Entity' }
+    { id: generateId('c'), name: 'Aether Sprite', cost: 1, power: 1, health: 1, rarity: 'Common', card_type: 'Entity' },
+    { id: generateId('c'), name: 'Solar Flare', cost: 3, card_type: 'Spell', description: 'Deal 3 damage to any target.' },
+    { id: generateId('c'), name: 'Dawnblade Templar', cost: 4, power: 5, health: 4, rarity: 'Rare', card_type: 'Entity' }
   ]);
   const [deckIndex, setDeckIndex] = useState(0);
 
@@ -43,6 +48,7 @@ export default function GameEngine() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hasDrawnThisTurn, setHasDrawnThisTurn] = useState(false);
   const [hasResonatedThisTurn, setHasResonatedThisTurn] = useState(false);
+  const [attackedThisTurn, setAttackedThisTurn] = useState<string[]>([]);
 
   const isPlayerTurn = matchStatus === 'PLAYING' && activePlayer === username;
 
@@ -85,24 +91,36 @@ export default function GameEngine() {
     return () => clearInterval(interval);
   }, [matchId, playerNum]);
 
-  // Reset energy on turn start
+  // Reset energy and attack states on turn start
   useEffect(() => {
     if (isPlayerTurn) {
       setEnergy(resonanceRow.length);
       setHasDrawnThisTurn(false);
       setHasResonatedThisTurn(false);
+      setAttackedThisTurn([]);
     }
   }, [activePlayer, isPlayerTurn]);
 
+  const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUsername(e.target.value);
+    localStorage.setItem('glimmerfall_username', e.target.value);
+  }
+
   const findDuel = async () => {
     setIsSearching(true);
+    setErrorMsg('');
     try {
       const res = await fetch('/api/matchmaking', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username })
+        body: JSON.stringify({ username, lobbyCode: lobbyCode || undefined })
       });
       const data = await res.json();
+      if (data.error) {
+        setErrorMsg(data.error);
+        setIsSearching(false);
+        return;
+      }
       setMatchId(data.matchId);
       setPlayerNum(data.player);
       setMatchStatus(data.status || 'PLAYING');
@@ -111,6 +129,7 @@ export default function GameEngine() {
       }
     } catch (err) {
       console.error(err);
+      setIsSearching(false);
     }
   };
 
@@ -156,7 +175,7 @@ export default function GameEngine() {
         if (energy >= card.cost) {
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
-          await sendAction('PLAY_CARD', { zone: 'battlefield', card });
+          await sendAction('PLAY_CARD', { zone: 'battlefield', card: { ...card, turnSummoned: turn } });
         }
       } else if (over.id === 'resonance') {
         if (hasResonatedThisTurn) return;
@@ -176,6 +195,16 @@ export default function GameEngine() {
     else if (battlefield.find(c => c.id === card.id)) {
       if (over.id === 'opponent_vanguard') {
         if (!card.power) return;
+        if (card.turnSummoned === turn) {
+           setTurnLog(prev => [`${card.name} has summoning sickness and cannot attack this turn.`, ...prev]);
+           return;
+        }
+        if (attackedThisTurn.includes(card.id)) {
+           setTurnLog(prev => [`${card.name} has already attacked this turn.`, ...prev]);
+           return;
+        }
+
+        setAttackedThisTurn(prev => [...prev, card.id]);
         await sendAction('ATTACK_VANGUARD', { power: card.power });
       }
     }
@@ -188,8 +217,8 @@ export default function GameEngine() {
   const drawCard = () => {
     if (hasDrawnThisTurn || !isPlayerTurn) return;
     const possibleDraws = [
-      { id: 'd1'+Math.random(), name: 'Eclipse Ritual', cost: 5, power: 5, health: 5, rarity: 'Epic', card_type: 'Entity' },
-      { id: 'd2'+Math.random(), name: 'Gilded Pegasus', cost: 3, power: 3, health: 4, rarity: 'Rare', card_type: 'Entity' }
+      { id: generateId('d'), name: 'Eclipse Ritual', cost: 5, power: 5, health: 5, rarity: 'Epic', card_type: 'Entity' },
+      { id: generateId('d'), name: 'Gilded Pegasus', cost: 3, power: 3, health: 4, rarity: 'Rare', card_type: 'Entity' }
     ];
     setHand(prev => [...prev, possibleDraws[deckIndex % 2]]);
     setDeckIndex(d => d + 1);
@@ -200,13 +229,38 @@ export default function GameEngine() {
     return (
       <div className="min-h-full bg-slate-950 flex flex-col items-center justify-center p-8">
         <div className="bg-slate-900 border-2 border-cyan-500 p-8 rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.5)] max-w-md w-full text-center">
-          <h2 className="text-3xl font-black text-cyan-400 mb-2">PvP Arena</h2>
-          <p className="text-slate-400 mb-8 font-mono">Logged in as: {username}</p>
+          <h2 className="text-3xl font-black text-cyan-400 mb-6">PvP Arena</h2>
+          
+          {matchStatus === 'IDLE' && (
+            <div className="flex flex-col gap-4 mb-8 text-left">
+              <div>
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-1 block">Player Name</label>
+                <input 
+                  type="text" 
+                  value={username} 
+                  onChange={handleUsernameChange}
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded p-3 focus:border-cyan-400 outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-cyan-500 uppercase tracking-widest mb-1 block">Lobby Code (Optional)</label>
+                <input 
+                  type="text" 
+                  value={lobbyCode} 
+                  onChange={e => setLobbyCode(e.target.value)}
+                  placeholder="Leave empty for random duel"
+                  className="w-full bg-slate-800 border border-slate-700 text-white rounded p-3 focus:border-cyan-400 outline-none transition-colors"
+                />
+              </div>
+              {errorMsg && <p className="text-red-500 text-sm font-bold">{errorMsg}</p>}
+            </div>
+          )}
           
           {matchStatus === 'WAITING' ? (
             <div className="flex flex-col items-center gap-4">
               <Loader2 className="w-12 h-12 text-cyan-500 animate-spin" />
               <p className="text-cyan-300 font-bold tracking-widest animate-pulse">SEARCHING FOR OPPONENT...</p>
+              {lobbyCode && <p className="text-slate-500 text-sm mt-2">Waiting in Lobby: {lobbyCode}</p>}
             </div>
           ) : (
             <button 
@@ -215,7 +269,7 @@ export default function GameEngine() {
               className="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xl rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.6)] hover:scale-105 flex items-center justify-center gap-3"
             >
               <Swords className="w-6 h-6" />
-              FIND DUEL
+              {lobbyCode ? 'JOIN / CREATE LOBBY' : 'FIND DUEL'}
             </button>
           )}
         </div>
@@ -228,7 +282,7 @@ export default function GameEngine() {
       <div className="min-h-full bg-slate-950 flex items-center justify-center p-8">
         <div className="bg-slate-900 border-2 border-yellow-500 p-12 rounded-2xl shadow-[0_0_100px_rgba(234,179,8,0.5)] text-center">
           <h1 className="text-6xl font-black text-yellow-400 mb-4">{matchStatus}</h1>
-          <button onClick={() => window.location.reload()} className="mt-8 px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-700">Play Again</button>
+          <button onClick={() => window.location.reload()} className="mt-8 px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-700 font-bold tracking-widest border border-slate-600">PLAY AGAIN</button>
         </div>
       </div>
     );
@@ -236,17 +290,6 @@ export default function GameEngine() {
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <style>{`
-        @keyframes shake {
-          0%, 100% { transform: translateX(0); }
-          10%, 30%, 50%, 70%, 90% { transform: translateX(-10px) rotate(-1deg); }
-          20%, 40%, 60%, 80% { transform: translateX(10px) rotate(1deg); }
-        }
-        .animate-shake {
-          animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
-          border: 4px solid rgba(220,38,38,0.8);
-        }
-      `}</style>
       <div className={`min-h-full bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] bg-slate-950 flex flex-col justify-between p-4 lg:p-8 transition-colors duration-100`}>
         
         {/* Opponent Area (Top) */}
@@ -315,8 +358,18 @@ export default function GameEngine() {
         <div className="flex flex-col gap-4">
           <DropZone id="battlefield" title="Your Battlefield">
             {battlefield.map(c => (
-              <div key={c.id} className="animate-in slide-in-from-bottom-8 fade-in zoom-in-75 duration-500">
+              <div key={c.id} className="animate-in slide-in-from-bottom-8 fade-in zoom-in-75 duration-500 relative">
                 <Card {...c} />
+                {attackedThisTurn.includes(c.id) && (
+                   <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center border-2 border-slate-800">
+                     <span className="text-red-500 font-black tracking-widest rotate-[-15deg]">EXHAUSTED</span>
+                   </div>
+                )}
+                {c.turnSummoned === turn && (
+                   <div className="absolute top-2 right-2 bg-slate-800/80 p-1 rounded">
+                     <span className="text-[10px] text-yellow-400 font-bold">ZzZ</span>
+                   </div>
+                )}
               </div>
             ))}
           </DropZone>
