@@ -3,7 +3,7 @@ import { DndContext, type DragEndEvent, type DragStartEvent, DragOverlay } from 
 import { useWebSocket } from '../WebSocketContext'
 import { DropZone } from '../components/DropZone'
 import { Card } from '../components/Card'
-import { User, ShieldAlert, Zap, Sword } from 'lucide-react'
+import { User, ShieldAlert, Zap } from 'lucide-react'
 
 export default function GameEngine() {
   const { gameState, sendIntent } = useWebSocket()
@@ -21,7 +21,7 @@ export default function GameEngine() {
   const [turnLog, setTurnLog] = useState<string[]>(['Match started! Your turn. Drag a card to the Resonance Row to gain Energy!'])
   
   // Local state for demo purposes until backend is fully connected
-  const [hand, setHand] = useState([
+  const [hand, setHand] = useState<any[]>([
     { id: 'c3', name: 'Aether Sprite', cost: 1, power: 1, health: 1, rarity: 'Common' },
     { id: 'c4', name: 'Solar Flare', cost: 3, card_type: 'Spell', description: 'Deal 3 damage to any target.' }
   ])
@@ -172,10 +172,10 @@ export default function GameEngine() {
 
       // Scripted draw
       if (turn === 1) {
-        setHand(prev => [...prev, { id: 'c2', name: 'Dawnblade Templar', cost: 4, power: 5, health: 4, rarity: 'Rare' }])
+        setHand(prev => [...prev, { id: 'c2', name: 'Dawnblade Templar', cost: 4, power: 5, health: 4, rarity: 'Rare', card_type: 'Entity', description: 'A holy warrior.' }])
         setTurnLog(prev => [`Turn 2 begins. You drew Dawnblade Templar! Energy: ${newEnergy}.`, ...prev])
       } else if (turn === 2) {
-        setHand(prev => [...prev, { id: 'c1', name: 'Gaia, The World-Soul', cost: 7, power: 8, health: 8, rarity: 'Mythic' }])
+        setHand(prev => [...prev, { id: 'c1', name: 'Gaia, The World-Soul', cost: 7, power: 8, health: 8, rarity: 'Mythic', card_type: 'Entity', description: 'The planet incarnate.' }])
         setTurnLog(prev => [`Turn 3 begins. You drew Gaia! Energy: ${newEnergy}.`, ...prev])
       } else {
         setTurnLog(prev => [`Turn ${turn + 1} begins. Energy: ${newEnergy}.`, ...prev])
@@ -186,10 +186,10 @@ export default function GameEngine() {
   const drawCard = () => {
     if (hasDrawnThisTurn) return;
     const possibleDraws = [
-      { id: 'd1', name: 'Eclipse Ritual', cost: 5, power: 5, health: 5, rarity: 'Epic', card_type: 'Entity' },
-      { id: 'd2', name: 'Gilded Pegasus', cost: 3, power: 3, health: 4, rarity: 'Rare', card_type: 'Entity' },
-      { id: 'd3', name: 'Crypt Lantern', cost: 2, power: 1, health: 3, rarity: 'Common', card_type: 'Entity' },
-      { id: 'd4', name: 'Sunfire Colossus', cost: 8, power: 9, health: 9, rarity: 'Mythic', card_type: 'Entity' }
+      { id: 'd1', name: 'Eclipse Ritual', cost: 5, power: 5, health: 5, rarity: 'Epic', card_type: 'Entity', description: 'Draw mechanic.' },
+      { id: 'd2', name: 'Gilded Pegasus', cost: 3, power: 3, health: 4, rarity: 'Rare', card_type: 'Entity', description: 'Draw mechanic.' },
+      { id: 'd3', name: 'Crypt Lantern', cost: 2, power: 1, health: 3, rarity: 'Common', card_type: 'Entity', description: 'Draw mechanic.' },
+      { id: 'd4', name: 'Sunfire Colossus', cost: 8, power: 9, health: 9, rarity: 'Mythic', card_type: 'Entity', description: 'Draw mechanic.' }
     ];
     if (deckIndex < possibleDraws.length) {
       setHand(prev => [...prev, possibleDraws[deckIndex]]);

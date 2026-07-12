@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Layers, LibraryBig, ArrowLeft, Search, Plus, Minus, PlusCircle } from 'lucide-react';
+import { LibraryBig, ArrowLeft, Search, Plus, Minus, PlusCircle } from 'lucide-react';
 import { CardTemplate } from '../components/CardTemplate';
 
 export const DeckBuilder = () => {
