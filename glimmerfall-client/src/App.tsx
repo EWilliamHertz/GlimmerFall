@@ -11,6 +11,7 @@ import { DeckBuilder } from './pages/DeckBuilder';
 import { DeveloperResources } from './pages/DeveloperResources';
 import { CardTemplate } from './components/CardTemplate';
 import GameEngine from './pages/GameEngine';
+import TutorialEngine from './pages/TutorialEngine';
 
 function App() {
   const location = useLocation();
@@ -154,6 +155,7 @@ function App() {
             <Route path="/booster" element={<BoosterOpener />} />
             <Route path="/decks" element={<DeckBuilder />} />
             <Route path="/play" element={<GameEngine />} />
+            <Route path="/tutorial" element={<TutorialEngine />} />
             <Route path="/resources" element={<DeveloperResources />} />
           </Routes>
         </div>
