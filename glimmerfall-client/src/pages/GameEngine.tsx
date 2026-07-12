@@ -30,12 +30,9 @@ export default function GameEngine() {
   const [playerHp, setPlayerHp] = useState(20);
   const [opponentHp, setOpponentHp] = useState(20);
   const [turnLog, setTurnLog] = useState<string[]>([]);
+  const [fullDeck, setFullDeck] = useState<any[]>([]);
   
-  const [hand, setHand] = useState<any[]>([
-    { id: generateId('c'), name: 'Aether Sprite', cost: 1, power: 1, health: 1, rarity: 'Common', card_type: 'Entity' },
-    { id: generateId('c'), name: 'Solar Flare', cost: 3, card_type: 'Spell', description: 'Deal 3 damage to any target.' },
-    { id: generateId('c'), name: 'Dawnblade Templar', cost: 4, power: 5, health: 4, rarity: 'Rare', card_type: 'Entity' }
-  ]);
+  const [hand, setHand] = useState<any[]>([]);
   const [deckIndex, setDeckIndex] = useState(0);
 
   const [battlefield, setBattlefield] = useState<any[]>([]);
@@ -51,6 +48,43 @@ export default function GameEngine() {
   const [attackedThisTurn, setAttackedThisTurn] = useState<string[]>([]);
 
   const isPlayerTurn = matchStatus === 'PLAYING' && activePlayer === username;
+
+  // Load Active Deck
+  useEffect(() => {
+    const activeDeckName = localStorage.getItem('glimmerfall_active_deck') || "Nature's Wrath";
+    if (activeDeckName) {
+      Promise.all([
+        fetch(`/api/decks?username=${encodeURIComponent(username)}`).then(r => r.json()),
+        fetch('/api/cards').then(r => r.json())
+      ]).then(([decksData, cardsData]) => {
+        const allCards = cardsData.cards || cardsData || [];
+        
+        let targetDeck = (decksData.decks || []).find((d: any) => d.deck_name === activeDeckName);
+        
+        // Handle tutorial fallback decks if no db deck found
+        let deckArray: any[] = [];
+        if (targetDeck) {
+          targetDeck.cards.forEach((c: any) => {
+            const cardObj = allCards.find((dbCard: any) => dbCard.name === c.card_name);
+            if (cardObj) {
+              for (let i=0; i<c.count; i++) deckArray.push({ ...cardObj, id: generateId('d') });
+            }
+          });
+        } else if (activeDeckName === "Nature's Wrath" || activeDeckName === "Cinder Ignition") {
+            // Fallback for default decks
+            for (let i=0; i<20; i++) deckArray.push({ ...allCards[0], id: generateId('d') });
+            for (let i=0; i<20; i++) deckArray.push({ ...allCards[1], id: generateId('d') });
+        }
+        
+        if (deckArray.length > 0) {
+          deckArray = deckArray.sort(() => Math.random() - 0.5);
+          setFullDeck(deckArray);
+          setHand(deckArray.slice(0, 5));
+          setDeckIndex(5);
+        }
+      });
+    }
+  }, [username]);
 
   // Poll Match State
   useEffect(() => {
@@ -216,13 +250,11 @@ export default function GameEngine() {
 
   const drawCard = () => {
     if (hasDrawnThisTurn || !isPlayerTurn) return;
-    const possibleDraws = [
-      { id: generateId('d'), name: 'Eclipse Ritual', cost: 5, power: 5, health: 5, rarity: 'Epic', card_type: 'Entity' },
-      { id: generateId('d'), name: 'Gilded Pegasus', cost: 3, power: 3, health: 4, rarity: 'Rare', card_type: 'Entity' }
-    ];
-    setHand(prev => [...prev, possibleDraws[deckIndex % 2]]);
-    setDeckIndex(d => d + 1);
-    setHasDrawnThisTurn(true);
+    if (deckIndex < fullDeck.length) {
+      setHand(prev => [...prev, fullDeck[deckIndex]]);
+      setDeckIndex(d => d + 1);
+      setHasDrawnThisTurn(true);
+    }
   }
 
   if (matchStatus === 'IDLE' || matchStatus === 'WAITING') {

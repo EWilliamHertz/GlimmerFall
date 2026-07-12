@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { LibraryBig, ArrowLeft, Search, Plus, Minus, PlusCircle } from 'lucide-react';
 import { CardTemplate } from '../components/CardTemplate';
+import { useNavigate } from 'react-router-dom';
 
 export const DeckBuilder = () => {
   const [editingDeck, setEditingDeck] = useState<string | null>(null);
@@ -10,6 +11,7 @@ export const DeckBuilder = () => {
   const [search, setSearch] = useState('');
   const [costFilters, setCostFilters] = useState<number[]>([]);
   const [typeFilter, setTypeFilter] = useState<string>('All');
+  const navigate = useNavigate();
 
   const currentUser = localStorage.getItem('glimmerfall_user') || 'Guest Player';
 
@@ -115,6 +117,11 @@ export const DeckBuilder = () => {
            alert("Failed to save deck");
        }
     }).catch(err => console.error("Error saving deck:", err));
+  };
+
+  const handlePlay = (deckName: string, mode: 'pvp' | 'practice') => {
+    localStorage.setItem('glimmerfall_active_deck', deckName);
+    navigate(mode === 'pvp' ? '/play' : '/tutorial');
   };
 
   if (editingDeck) {
@@ -274,8 +281,8 @@ export const DeckBuilder = () => {
                   <button onClick={() => setEditingDeck(deck.deck_name)} className="flex-1 bg-slate-800 hover:bg-cyan-600 text-white font-semibold py-2 rounded-lg transition-colors">
                     Edit Deck
                   </button>
-                  <button className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
-                    Play
+                  <button onClick={() => handlePlay(deck.deck_name, 'pvp')} className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
+                    Play PvP
                   </button>
                 </div>
               </div>
@@ -306,7 +313,7 @@ export const DeckBuilder = () => {
               <button onClick={() => setEditingDeck("Nature's Wrath")} className="flex-1 bg-slate-800 hover:bg-cyan-600 text-white font-semibold py-2 rounded-lg transition-colors">
                 Edit Deck
               </button>
-              <button className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
+              <button onClick={() => handlePlay("Nature's Wrath", 'practice')} className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
                 Play Practice
               </button>
             </div>
@@ -325,7 +332,7 @@ export const DeckBuilder = () => {
               <button onClick={() => setEditingDeck("Cinder Ignition")} className="flex-1 bg-slate-800 hover:bg-red-600 text-white font-semibold py-2 rounded-lg transition-colors">
                 Edit Deck
               </button>
-              <button className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
+              <button onClick={() => handlePlay("Cinder Ignition", 'practice')} className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
                 Play Practice
               </button>
             </div>
