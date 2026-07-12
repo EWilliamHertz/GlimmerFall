@@ -41,7 +41,6 @@ export default function GameEngine() {
 
   const [energy, setEnergy] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [shake, setShake] = useState(false);
   const [hasDrawnThisTurn, setHasDrawnThisTurn] = useState(false);
   const [hasResonatedThisTurn, setHasResonatedThisTurn] = useState(false);
 
@@ -248,7 +247,7 @@ export default function GameEngine() {
           border: 4px solid rgba(220,38,38,0.8);
         }
       `}</style>
-      <div className={`min-h-full bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] bg-slate-950 flex flex-col justify-between p-4 lg:p-8 transition-colors duration-100 ${shake ? 'animate-shake bg-red-950' : ''}`}>
+      <div className={`min-h-full bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] bg-slate-950 flex flex-col justify-between p-4 lg:p-8 transition-colors duration-100`}>
         
         {/* Opponent Area (Top) */}
         <div className="flex flex-col gap-4">
