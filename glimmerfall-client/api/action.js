@@ -55,6 +55,9 @@ export default async function handler(req, res) {
           state.battlefield.splice(targetIndex, 1);
         }
       }
+    } else if (action === 'SURRENDER') {
+      match.status = player === 1 ? 'PLAYER 2 WINS' : 'PLAYER 1 WINS';
+      state.log.unshift(`Player ${player} surrendered!`);
     }
 
     await client.query(

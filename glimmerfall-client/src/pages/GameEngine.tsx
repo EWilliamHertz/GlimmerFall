@@ -494,6 +494,16 @@ export default function GameEngine() {
                   <h3 className="font-bold text-cyan-400 text-xl">{username}</h3>
                   <p className="text-sm text-cyan-600 font-mono font-bold">{playerHp} Nexus HP</p>
                 </div>
+                <button 
+                  onClick={() => {
+                    if (window.confirm("Are you sure you want to concede this match?")) {
+                      sendAction('SURRENDER');
+                    }
+                  }} 
+                  className="ml-auto text-xs bg-red-950 hover:bg-red-900 text-red-400 font-bold px-3 py-1 rounded border border-red-900 transition-colors"
+                >
+                  CONCEDE
+                </button>
               </div>
               <div className="flex items-center gap-4 bg-slate-900/80 p-3 rounded-xl border border-yellow-600/50">
                 <div className="w-10 h-10 bg-yellow-900/50 rounded-full flex items-center justify-center text-yellow-400 border border-yellow-500">
