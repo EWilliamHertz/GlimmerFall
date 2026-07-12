@@ -1,23 +1,47 @@
 import React from 'react';
 import { useDraggable } from '@dnd-kit/core';
+import { CardTemplate } from './CardTemplate';
 
 interface CardProps {
   id: string;
   name: string;
   cost: number;
-  power: number;
-  health: number;
+  power?: number;
+  health?: number;
+  rarity?: string;
+  card_type?: string;
+  description?: string;
 }
 
-export const Card: React.FC<CardProps> = ({ id, name, cost, power, health }) => {
-  const { attributes, listeners, setNodeRef, transform } = useDraggable({
+export const Card: React.FC<CardProps> = ({ 
+  id, name, cost, power = 1, health = 1, 
+  rarity = 'Common', card_type = 'Entity', description = 'Simulated resonance data.' 
+}) => {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: id,
     data: { name, cost, power, health }
   });
 
   const style = transform ? {
-    transform: `translate3d(${transform.x}px, ${transform.y}px, 0)`,
+    transform: `translate3d(${transform.x}px, ${transform.y}px, 0) scale(${isDragging ? 1.05 : 1})`,
+    zIndex: isDragging ? 100 : 'auto',
   } : undefined;
+
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    if (isDragging) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    window.dispatchEvent(new CustomEvent('card-hover-in', { 
+      detail: { 
+        card: { name, cost, power, health, rarity, card_type, description }, 
+        x: rect.right + 20, 
+        y: rect.top 
+      } 
+    }));
+  };
+
+  const handleMouseLeave = () => {
+    window.dispatchEvent(new Event('card-hover-out'));
+  };
 
   return (
     <div 
@@ -25,17 +49,14 @@ export const Card: React.FC<CardProps> = ({ id, name, cost, power, health }) => 
       style={style} 
       {...listeners} 
       {...attributes}
-      className="w-32 h-44 bg-slate-800 border-2 border-cyan-500 rounded-lg p-2 text-white flex flex-col justify-between shadow-[0_0_15px_rgba(6,182,212,0.5)] cursor-grab active:cursor-grabbing"
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      className={`w-32 md:w-40 shrink-0 cursor-grab active:cursor-grabbing ${isDragging ? 'shadow-[0_0_40px_rgba(6,182,212,0.6)] rounded-xl' : ''}`}
     >
-      <div className="flex justify-between items-start">
-        <span className="text-xs font-bold truncate max-w-[80%]">{name}</span>
-        <span className="bg-cyan-600 rounded-full w-5 h-5 flex items-center justify-center text-xs">{cost}</span>
-      </div>
-      
-      <div className="flex justify-between mt-auto">
-        <span className="bg-red-900 px-1 rounded text-xs">{power}</span>
-        <span className="bg-green-900 px-1 rounded text-xs">{health}</span>
+      <div className="pointer-events-none w-full h-full">
+        <CardTemplate card={{ name, cost, power, health, rarity, card_type, description }} minimal={true} />
       </div>
     </div>
   );
 };
+

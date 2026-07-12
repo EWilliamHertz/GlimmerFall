@@ -1,14 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io, Socket } from 'socket.io-client';
-
-interface GameState {
-  players: any;
-  currentTurn: string;
-}
 
 interface WebSocketContextType {
-  socket: Socket | null;
-  gameState: GameState | null;
+  socket: WebSocket | null;
+  gameState: any | null;
   sendIntent: (type: string, payload: any) => void;
 }
 
@@ -19,16 +13,34 @@ const WebSocketContext = createContext<WebSocketContextType>({
 });
 
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [socket, setSocket] = useState<Socket | null>(null);
-  const [gameState, setGameState] = useState<GameState | null>(null);
+  const [socket, setSocket] = useState<WebSocket | null>(null);
+  const [gameState, setGameState] = useState<any | null>(null);
+  const [clientId] = useState(() => Math.random().toString(36).substring(7));
 
   useEffect(() => {
-    const newSocket = io('http://localhost:8080');
-    setSocket(newSocket);
+    const wsUrl = window.location.hostname === 'localhost' ? 'ws://localhost:8080/ws' : `wss://${window.location.host}/api/ws`;
+    const newSocket = new WebSocket(wsUrl);
 
-    newSocket.on('state_update', (state: GameState) => {
-      setGameState(state);
-    });
+    newSocket.onopen = () => {
+      console.log('Connected to Game Server');
+      setSocket(newSocket);
+    };
+
+    newSocket.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        if (data.clientId !== clientId) {
+           setGameState(data);
+        }
+      } catch (err) {
+        console.error("Failed to parse websocket message", err);
+      }
+    };
+
+    newSocket.onclose = () => {
+      console.log('Disconnected from Game Server');
+      setSocket(null);
+    };
 
     return () => {
       newSocket.close();
@@ -36,8 +48,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   }, []);
 
   const sendIntent = (type: string, payload: any) => {
-    if (socket) {
-      socket.emit('action_intent', { type, payload });
+    if (socket && socket.readyState === WebSocket.OPEN) {
+      socket.send(JSON.stringify({ type, payload, clientId }));
     }
   };
 

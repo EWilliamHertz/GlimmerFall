@@ -1,9 +1,12 @@
 import { useState } from 'react';
 import { Lock, Mail, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 export const Auth = () => {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -14,14 +17,16 @@ export const Auth = () => {
 
     if (isLogin) {
       setTimeout(() => {
-        setStatusMsg("Login system offline during Alpha. Please register for waitlist instead.");
-        setIsLoading(false);
+        const user = email.split('@')[0];
+        localStorage.setItem('glimmerfall_user', user);
+        window.dispatchEvent(new Event('auth-change'));
+        navigate('/play');
       }, 1000);
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:8080/api/waitlist', {
+      const response = await fetch('/api/waitlist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email })
@@ -29,8 +34,9 @@ export const Auth = () => {
       const data = await response.json();
       
       if (response.ok) {
-        setStatusMsg(data.message || "Successfully registered!");
-        setEmail('');
+        localStorage.setItem('glimmerfall_user', username || email.split('@')[0]);
+        window.dispatchEvent(new Event('auth-change'));
+        navigate('/play');
       } else {
         setStatusMsg(data.error || "Failed to register.");
       }
@@ -63,7 +69,7 @@ export const Auth = () => {
               <label className="block text-sm font-medium text-slate-400 mb-1">Username</label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 w-5 h-5" />
-                <input type="text" className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 pl-10 pr-4 text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="Player1" />
+                <input type="text" value={username} onChange={e => setUsername(e.target.value)} required={!isLogin} className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 pl-10 pr-4 text-white focus:outline-none focus:border-cyan-500 transition-colors" placeholder="Player1" />
               </div>
             </div>
           )}
