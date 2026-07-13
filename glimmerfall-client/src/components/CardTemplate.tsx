@@ -107,7 +107,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
       {/* Background Full Art Image */}
       <div className="absolute inset-0 z-0">
         <img 
-          src={`https://res.cloudinary.com/dfyh7cs1g/image/upload/v2/glimmerfall/card_renders/${card.name.toLowerCase().replace(/[,']/g, '').replace(/ /g, '_')}.png`} 
+          src={`https://res.cloudinary.com/dfyh7cs1g/image/upload/v3/glimmerfall/card_renders/${card.name.toLowerCase().replace(/[,']/g, '').replace(/ /g, '_')}.png`} 
           alt={card.name} 
           className="w-full h-full object-cover object-center"
           onError={(e) => {
