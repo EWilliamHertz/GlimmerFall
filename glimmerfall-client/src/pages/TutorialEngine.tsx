@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { DndContext, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core'
 import { DropZone } from '../components/DropZone'
 import { Card } from '../components/Card'
-import { User, ShieldAlert, Zap, Loader2, Swords } from 'lucide-react'
+import { User, ShieldAlert, Zap, Swords } from 'lucide-react'
 
 export default function TutorialEngine() {
   const [username] = useState(() => {
@@ -20,7 +20,7 @@ export default function TutorialEngine() {
   // Sync State
   const [turn, setTurn] = useState(1);
   const [activePlayer, setActivePlayer] = useState<string>('');
-  const [playerHp, setPlayerHp] = useState(20);
+  const [playerHp] = useState(20);
   const [opponentHp, setOpponentHp] = useState(20);
   const [turnLog, setTurnLog] = useState<string[]>([]);
   
@@ -30,8 +30,8 @@ export default function TutorialEngine() {
   const [battlefield, setBattlefield] = useState<any[]>([]);
   const [resonanceRow, setResonanceRow] = useState<any[]>([]);
   
-  const [opponentBattlefield, setOpponentBattlefield] = useState<any[]>([]);
-  const [opponentResonance, setOpponentResonance] = useState<any[]>([]);
+  const [opponentBattlefield] = useState<any[]>([]);
+  const [opponentResonance] = useState<any[]>([]);
 
   const [energy, setEnergy] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);

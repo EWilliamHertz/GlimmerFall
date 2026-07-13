@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { CardTemplate } from '../components/CardTemplate';
-import { STARTER_DECK_KEYS } from '../constants/starterDecks';
 
 export const PrintDecks = () => {
   const [cards, setCards] = useState<any[]>([]);

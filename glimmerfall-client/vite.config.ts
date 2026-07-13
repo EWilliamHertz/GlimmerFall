@@ -4,16 +4,16 @@ import tailwindcss from '@tailwindcss/vite'
 
 const apiMiddleware = () => ({
   name: 'api-middleware',
-  configureServer(server) {
-    server.middlewares.use(async (req, res, next) => {
+  configureServer(server: any) {
+    server.middlewares.use(async (req: any, res: any, next: any) => {
       if (req.url?.startsWith('/api/')) {
         try {
           const path = req.url.split('?')[0];
           const modulePath = `.${path}.js`; 
           const { default: handler } = await server.ssrLoadModule(modulePath);
           
-          res.status = (code) => { res.statusCode = code; return res; };
-          res.json = (data) => {
+          res.status = (code: any) => { res.statusCode = code; return res; };
+          res.json = (data: any) => {
              res.setHeader('Content-Type', 'application/json');
              res.end(JSON.stringify(data));
           };
@@ -23,12 +23,12 @@ const apiMiddleware = () => ({
 
           if (req.method === 'POST') {
              let body = '';
-             req.on('data', chunk => body += chunk.toString());
+             req.on('data', (chunk: any) => body += chunk.toString());
              req.on('end', async () => {
                  try {
                      req.body = body ? JSON.parse(body) : {};
                      await handler(req, res);
-                 } catch(e) {
+                 } catch(e: any) {
                      res.status(500).json({error: e.message});
                  }
              });
@@ -36,7 +36,7 @@ const apiMiddleware = () => ({
              await handler(req, res);
           }
           return;
-        } catch (err) {
+        } catch (err: any) {
           console.error('API Error:', err);
           if (!res.headersSent) {
              res.statusCode = 500;
