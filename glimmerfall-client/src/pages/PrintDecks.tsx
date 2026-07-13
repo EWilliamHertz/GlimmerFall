@@ -82,28 +82,30 @@ export const PrintDecks = () => {
     <div className="min-h-screen bg-slate-200 print-container">
       <style>{`
         @media print {
+          nav, footer, header {
+            display: none !important;
+          }
           .no-print {
             display: none !important;
           }
-          @page {
-            size: A4;
-            margin: 0;
-          }
-          body {
-            margin: 0;
-            background: white;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .print-container {
+          body, html, #root {
             background: white !important;
+            margin: 0 !important;
             padding: 0 !important;
+          }
+          /* Override the md:flex layout of the main app container */
+          .md\\:flex {
+            display: block !important;
           }
           .page-wrapper {
             margin: 0 !important;
             box-shadow: none !important;
             page-break-after: always;
             break-after: page;
+          }
+          @page {
+            size: A4;
+            margin: 0;
           }
         }
       `}</style>
@@ -135,19 +137,38 @@ export const PrintDecks = () => {
         </div>
       </div>
 
-      <div className="print-content pb-10">
+      <div className="print-content" style={{ background: 'white' }}>
         {chunkedCards.map((page, pageIndex) => (
           <div 
             key={pageIndex} 
-            className="page-wrapper bg-white mx-auto shadow-xl mb-8 flex flex-wrap content-start" 
-            style={{ width: '210mm', height: '297mm', padding: '10mm', gap: '2.5mm' }}
+            className="page-wrapper mx-auto" 
+            style={{ 
+              width: '180mm', // exactly 3 * 60mm
+              height: '251.4mm', // exactly 3 * 83.8mm
+              pageBreakAfter: 'always',
+              breakAfter: 'page',
+              margin: '10mm auto',
+              background: 'white',
+              position: 'relative',
+              overflow: 'hidden'
+            }}
           >
             {page.map((card: any, i: number) => (
-              <div key={i} style={{ width: '61.5mm', height: '88mm', position: 'relative', flexShrink: 0 }}>
+              <div 
+                key={i} 
+                style={{ 
+                  float: 'left',
+                  width: '60mm', 
+                  height: '83.8mm', 
+                  position: 'relative',
+                  boxSizing: 'border-box'
+                }}
+              >
                 <CardTemplate card={card} minimal={false} />
-                <div className="absolute inset-0 border-[0.5mm] border-dashed border-gray-400 pointer-events-none z-50"></div>
+                <div className="absolute inset-0 border-[0.5mm] border-solid border-gray-300 pointer-events-none z-50"></div>
               </div>
             ))}
+            <div style={{ clear: 'both' }}></div>
           </div>
         ))}
       </div>

@@ -7,9 +7,7 @@ cloudinary.config({
 });
 
 async function run() {
-  const r1 = await cloudinary.uploader.upload('/home/ewilliamhe/glimmerfall-tcg/haloed_bastion.webp', { folder: 'glimmerfall/card_renders', public_id: 'haloed_bastion', overwrite: true });
-  console.log("Uploaded haloed bastion:", r1.secure_url);
-  const r2 = await cloudinary.uploader.upload('/home/ewilliamhe/glimmerfall-tcg/solar_flare.webp', { folder: 'glimmerfall/card_renders', public_id: 'solar_flare', overwrite: true });
-  console.log("Uploaded solar flare:", r2.secure_url);
+  const r1 = await cloudinary.uploader.upload('/home/ewilliamhe/glimmerfall-tcg/IMG_5194.webp', { folder: 'glimmerfall/card_renders', public_id: 'blinding_radiance', overwrite: true });
+  console.log("Uploaded blinding_radiance:", r1.secure_url);
 }
 run();

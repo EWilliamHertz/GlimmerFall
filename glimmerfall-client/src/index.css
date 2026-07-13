@@ -1,1 +1,19 @@
 @import "tailwindcss";
+
+@media print {
+  nav, footer, .md\\:hidden.sticky, .no-print {
+    display: none !important;
+  }
+  .md\\:flex {
+    display: block !important;
+  }
+  body, html, #root, .min-h-screen {
+    background: white !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
+/* Custom Scrollbar */
