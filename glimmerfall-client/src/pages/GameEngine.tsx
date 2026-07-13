@@ -525,6 +525,11 @@ export default function GameEngine() {
               <EntityDropZone key={c.id} id={c.id}>
                 <div className="animate-in slide-in-from-top-8 fade-in zoom-in-75 duration-500 relative cursor-crosshair">
                   <Card {...c} health={c.currentHealth ?? c.health} />
+                  {c.exhausted && (
+                     <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center border-2 border-red-900 pointer-events-none">
+                       <span className="text-red-500 font-black tracking-widest rotate-[-15deg] bg-black/80 px-2 py-1 rounded">EXHAUSTED</span>
+                     </div>
+                  )}
                 </div>
               </EntityDropZone>
             ))}
@@ -562,7 +567,7 @@ export default function GameEngine() {
               <EntityDropZone key={c.id} id={c.id}>
                 <div className="animate-in slide-in-from-bottom-8 fade-in zoom-in-75 duration-500 relative">
                   <Card {...c} health={c.currentHealth ?? c.health} />
-                  {attackedThisTurn.includes(c.id) && (
+                  {(attackedThisTurn.includes(c.id) || c.exhausted) && (
                      <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center border-2 border-slate-800 pointer-events-none">
                        <span className="text-red-500 font-black tracking-widest rotate-[-15deg] bg-black/80 px-2 py-1 rounded">EXHAUSTED</span>
                      </div>

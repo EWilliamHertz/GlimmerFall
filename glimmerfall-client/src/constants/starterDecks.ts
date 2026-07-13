@@ -3,4 +3,6 @@
 export const STARTER_DECK_KEYS: Record<string, string> = {
   "Nature's Wrath": 'natures_wrath',
   "Cinder Ignition": 'cinder_ignition',
+  "Solar Singularity": 'solar_singularity',
+  "Gaia's Loop": 'gaias_loop'
 };

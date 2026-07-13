@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { DndContext, type DragEndEvent, type DragStartEvent, DragOverlay } from '@dnd-kit/core'
 import { DropZone } from '../components/DropZone'
 import { Card } from '../components/Card'
@@ -6,18 +7,15 @@ import { User, ShieldAlert, Zap, Loader2, Swords } from 'lucide-react'
 
 export default function TutorialEngine() {
   const [username] = useState(() => {
-    let u = localStorage.getItem('glimmerfall_username');
+    let u = localStorage.getItem('glimmerfall_user');
     if (!u) {
       u = `Player_${Math.floor(Math.random()*10000)}`;
-      localStorage.setItem('glimmerfall_username', u);
+      localStorage.setItem('glimmerfall_user', u);
     }
     return u;
   });
 
-  const [matchId, setMatchId] = useState<number | null>(null);
-  const [playerNum, setPlayerNum] = useState<number>(1);
   const [matchStatus, setMatchStatus] = useState<string>('IDLE');
-  const [isSearching, setIsSearching] = useState(false);
 
   // Sync State
   const [turn, setTurn] = useState(1);
@@ -43,47 +41,9 @@ export default function TutorialEngine() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [hasDrawnThisTurn, setHasDrawnThisTurn] = useState(false);
   const [hasResonatedThisTurn, setHasResonatedThisTurn] = useState(false);
+  const [aiIsThinking, setAiIsThinking] = useState(false);
 
   const isPlayerTurn = matchStatus === 'PLAYING' && activePlayer === username;
-
-  // Poll Match State
-  useEffect(() => {
-    if (!matchId) return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/match?id=${matchId}`);
-        const data = await res.json();
-        if (data.error) return;
-        
-        setMatchStatus(data.status);
-        setActivePlayer(data.active_player);
-        setTurn(data.current_turn);
-        
-        const state = data.state || {};
-        if (playerNum === 1) {
-          setPlayerHp(state.player1_hp);
-          setOpponentHp(state.player2_hp);
-        } else {
-          setPlayerHp(state.player2_hp);
-          setOpponentHp(state.player1_hp);
-        }
-
-        if (state.log) setTurnLog(state.log);
-
-        if (state.battlefield) {
-          setBattlefield(state.battlefield.filter((c: any) => c.owner === playerNum));
-          setOpponentBattlefield(state.battlefield.filter((c: any) => c.owner !== playerNum));
-        }
-        if (state.resonanceRow) {
-          setResonanceRow(state.resonanceRow.filter((c: any) => c.owner === playerNum));
-          setOpponentResonance(state.resonanceRow.filter((c: any) => c.owner !== playerNum));
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [matchId, playerNum]);
 
   // Reset energy on turn start
   useEffect(() => {
@@ -94,45 +54,42 @@ export default function TutorialEngine() {
     }
   }, [activePlayer, isPlayerTurn]);
 
-  const findDuel = async () => {
-    setIsSearching(true);
-    try {
-      const res = await fetch('/api/matchmaking', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username })
-      });
-      const data = await res.json();
-      setMatchId(data.matchId);
-      setPlayerNum(data.player);
-      setMatchStatus(data.status || 'PLAYING');
-      if (data.player === 1) {
-        setActivePlayer(username); // P1 starts
-      }
-    } catch (err) {
-      console.error(err);
-    }
+  const findDuel = () => {
+    setMatchStatus('PLAYING');
+    setActivePlayer(username);
+    setTurnLog(['Welcome to the Tutorial! Drag cards to play.']);
   };
 
-  const sendAction = async (action: string, payload: any = {}) => {
-    await fetch('/api/action', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchId, player: playerNum, action, payload })
-    });
-    // Optimistically fetch state immediately
-    const res = await fetch(`/api/match?id=${matchId}`);
-    const data = await res.json();
-    setActivePlayer(data.active_player);
-    const state = data.state || {};
-    if (playerNum === 1) {
-      setPlayerHp(state.player1_hp);
-      setOpponentHp(state.player2_hp);
-    } else {
-      setPlayerHp(state.player2_hp);
-      setOpponentHp(state.player1_hp);
+  const sendAction = (action: string, payload: any = {}) => {
+    if (action === 'PLAY_CARD') {
+      if (payload.zone === 'battlefield') {
+        setBattlefield(prev => [...prev, payload.card]);
+        setTurnLog(prev => [...prev, `${username} played ${payload.card.name}.`]);
+      } else if (payload.zone === 'resonanceRow') {
+        setResonanceRow(prev => [...prev, payload.card]);
+        setTurnLog(prev => [...prev, `${username} placed ${payload.card.name} as a Node.`]);
+      }
+    } else if (action === 'ATTACK_VANGUARD') {
+      setOpponentHp(h => {
+        const newHp = h - payload.power;
+        if (newHp <= 0) {
+          setMatchStatus('YOU WIN!');
+        }
+        return newHp;
+      });
+      setTurnLog(prev => [...prev, `${username} attacked the Vanguard for ${payload.power} damage!`]);
+    } else if (action === 'END_TURN') {
+      setActivePlayer('AI');
+      setAiIsThinking(true);
+      setTurnLog(prev => [...prev, `Turn passed to opponent.`]);
+      
+      setTimeout(() => {
+        setTurn(t => t + 1);
+        setActivePlayer(username);
+        setAiIsThinking(false);
+        setTurnLog(prev => [...prev, `Opponent passes. It's your turn!`]);
+      }, 3000);
     }
-    if (state.log) setTurnLog(state.log);
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -140,7 +97,7 @@ export default function TutorialEngine() {
     setActiveId(event.active.id as string);
   }
 
-  const handleDragEnd = async (event: DragEndEvent) => {
+  const handleDragEnd = (event: DragEndEvent) => {
     setActiveId(null);
     if (!isPlayerTurn) return;
     const { active, over } = event;
@@ -156,19 +113,19 @@ export default function TutorialEngine() {
         if (energy >= card.cost) {
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
-          await sendAction('PLAY_CARD', { zone: 'battlefield', card });
+          sendAction('PLAY_CARD', { zone: 'battlefield', card });
         }
       } else if (over.id === 'resonance') {
         if (hasResonatedThisTurn) return;
         setHand(hand.filter(c => c.id !== card.id));
         setEnergy(e => e + 1);
         setHasResonatedThisTurn(true);
-        await sendAction('PLAY_CARD', { zone: 'resonanceRow', card });
+        sendAction('PLAY_CARD', { zone: 'resonanceRow', card });
       } else if (over.id === 'opponent_vanguard') {
         if (card.card_type === 'Spell' && energy >= card.cost) {
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
-          await sendAction('ATTACK_VANGUARD', { power: 3 }); // Hardcoded for spell MVP
+          sendAction('ATTACK_VANGUARD', { power: 3 }); // Hardcoded for spell MVP
         }
       }
     } 
@@ -176,13 +133,13 @@ export default function TutorialEngine() {
     else if (battlefield.find(c => c.id === card.id)) {
       if (over.id === 'opponent_vanguard') {
         if (!card.power) return;
-        await sendAction('ATTACK_VANGUARD', { power: card.power });
+        sendAction('ATTACK_VANGUARD', { power: card.power });
       }
     }
   }
 
-  const passTurn = async () => {
-    await sendAction('END_TURN');
+  const passTurn = () => {
+    sendAction('END_TURN');
   }
 
   const drawCard = () => {
@@ -196,34 +153,31 @@ export default function TutorialEngine() {
     setHasDrawnThisTurn(true);
   }
 
-  if (matchStatus === 'IDLE' || matchStatus === 'WAITING') {
+  if (matchStatus === 'IDLE') {
     return (
       <div className="min-h-full bg-slate-950 flex flex-col items-center justify-center p-8">
         <div className="bg-slate-900 border-2 border-cyan-500 p-8 rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.5)] max-w-md w-full text-center">
-          <h2 className="text-3xl font-black text-cyan-400 mb-2">PvP Arena</h2>
+          <h2 className="text-3xl font-black text-cyan-400 mb-2">Beginner Tutorial</h2>
           <p className="text-slate-400 mb-8 font-mono">Logged in as: {username}</p>
           
-          {matchStatus === 'WAITING' ? (
-            <div className="flex flex-col items-center gap-4">
-              <Loader2 className="w-12 h-12 text-cyan-500 animate-spin" />
-              <p className="text-cyan-300 font-bold tracking-widest animate-pulse">SEARCHING FOR OPPONENT...</p>
-            </div>
-          ) : (
+          <div className="flex flex-col gap-3">
             <button 
               onClick={findDuel}
-              disabled={isSearching}
               className="w-full py-4 bg-cyan-600 hover:bg-cyan-500 text-white font-black text-xl rounded-xl transition-all shadow-[0_0_20px_rgba(6,182,212,0.6)] hover:scale-105 flex items-center justify-center gap-3"
             >
               <Swords className="w-6 h-6" />
-              FIND DUEL
+              START TUTORIAL
             </button>
-          )}
+            <Link to="/play" className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold tracking-widest text-sm rounded-xl transition-all border border-slate-700 hover:border-slate-500 flex items-center justify-center gap-2 mt-2">
+              GO TO PVP ARENA
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (matchStatus.includes('WINS')) {
+  if (matchStatus.includes('WIN')) {
     return (
       <div className="min-h-full bg-slate-950 flex items-center justify-center p-8">
         <div className="bg-slate-900 border-2 border-yellow-500 p-12 rounded-2xl shadow-[0_0_100px_rgba(234,179,8,0.5)] text-center">
@@ -258,7 +212,7 @@ export default function TutorialEngine() {
                   <ShieldAlert className="w-7 h-7" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-red-400 text-lg">Enemy Vanguard</h3>
+                  <h3 className="font-bold text-red-400 text-lg">Enemy Vanguard (AI)</h3>
                   <p className="text-sm text-slate-400 font-mono">{opponentHp} Nexus HP</p>
                 </div>
               </div>
@@ -301,7 +255,7 @@ export default function TutorialEngine() {
                   : 'bg-slate-800 border-slate-600 text-slate-400 cursor-not-allowed'
               }`}
             >
-              {isPlayerTurn ? 'PASS TURN' : 'OPPONENT TURN'}
+              {aiIsThinking ? 'OPPONENT THINKING...' : (isPlayerTurn ? 'PASS TURN' : 'OPPONENT TURN')}
             </button>
             <div className="text-xs text-cyan-500 font-mono font-bold bg-slate-900 px-3 py-1 rounded border border-cyan-900/50">
               TURN {turn}
@@ -355,10 +309,10 @@ export default function TutorialEngine() {
               </div>
 
               {/* Combat Log */}
-              <div className="h-24 bg-slate-950 rounded-lg border border-slate-800 p-2 overflow-y-auto mt-2">
+              <div className="h-24 bg-slate-950 rounded-lg border border-slate-800 p-2 overflow-y-auto mt-2 flex flex-col-reverse">
                 <div className="flex flex-col gap-1">
                   {turnLog.map((log, i) => (
-                    <span key={i} className={`text-xs ${i === 0 ? 'text-cyan-300' : 'text-slate-600'}`}>{log}</span>
+                    <span key={i} className={`text-xs ${i === turnLog.length - 1 ? 'text-cyan-300 font-bold' : 'text-slate-600'}`}>{log}</span>
                   ))}
                 </div>
               </div>
@@ -390,7 +344,7 @@ export default function TutorialEngine() {
 
       <DragOverlay dropAnimation={null}>
         {activeId ? (
-          <div className="animate-in zoom-in-105 duration-200 shadow-[0_0_50px_rgba(6,182,212,0.8)] rounded-xl">
+          <div className="animate-in zoom-in-105 duration-200 shadow-[0_0_50px_rgba(6,182,212,0.8)] rounded-xl z-[9999] pointer-events-none relative">
             <Card {...(hand.find(c => c.id === activeId) || battlefield.find(c => c.id === activeId) || hand[0])!} />
           </div>
         ) : null}

@@ -195,6 +195,35 @@ export const Rulebook = () => {
                     </p>
                   </div>
                 </section>
+
+                <section>
+                  <div className="flex items-center gap-4 mb-6 pb-2 border-b border-purple-900/30">
+                    <BookOpen className="w-8 h-8 text-cyan-400" />
+                    <h3 className="text-3xl font-black text-white tracking-wide">IV. Keyword Glossary</h3>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-xl">
+                      <h4 className="text-lg font-bold text-red-400 mb-1">Lethal</h4>
+                      <p className="text-slate-400 text-sm">Any amount of damage dealt by this entity to another entity is enough to instantly destroy it, regardless of the defender's remaining Health.</p>
+                    </div>
+                    <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-xl">
+                      <h4 className="text-lg font-bold text-yellow-400 mb-1">Swift</h4>
+                      <p className="text-slate-400 text-sm">This entity can attack on the exact same turn it is played, completely bypassing standard summoning sickness.</p>
+                    </div>
+                    <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-xl">
+                      <h4 className="text-lg font-bold text-purple-400 mb-1">Overwhelm</h4>
+                      <p className="text-slate-400 text-sm">If this entity attacks and is intercepted, any excess damage beyond the defending entity's Health is dealt directly to the opponent's Nexus (Bleed-through damage).</p>
+                    </div>
+                    <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-xl">
+                      <h4 className="text-lg font-bold text-blue-400 mb-1">Ranged</h4>
+                      <p className="text-slate-400 text-sm">This entity is permitted to declare attacks on the opponent's Vanguard or Nexus while stationed safely in the Support (Middle) row.</p>
+                    </div>
+                    <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-xl md:col-span-2">
+                      <h4 className="text-lg font-bold text-emerald-400 mb-1">Shield</h4>
+                      <p className="text-slate-400 text-sm">Prevents the very next instance of damage this entity would take from any source. Once damage is prevented, the shield is destroyed.</p>
+                    </div>
+                  </div>
+                </section>
               </div>
             )}
           </div>

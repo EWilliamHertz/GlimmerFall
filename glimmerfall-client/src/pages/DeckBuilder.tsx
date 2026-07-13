@@ -71,7 +71,7 @@ export const DeckBuilder = () => {
     setDecklist(prev => {
       const existing = prev.find(i => i.card.name === card.name);
       if (existing) {
-        if (existing.count >= 4) return prev; // Max 4 copies per card
+        if (existing.count >= 3) return prev; // Max 3 copies per card
         return prev.map(i => i.card.name === card.name ? { ...i, count: i.count + 1 } : i);
       }
       return [...prev, { card, count: 1 }];
@@ -342,6 +342,54 @@ export const DeckBuilder = () => {
               </button>
               <button onClick={() => handlePlay("Cinder Ignition", 'practice')} className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
                 Play Practice
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-10 border-t border-slate-800 pt-8">
+        <h3 className="text-xl font-bold text-white mb-4 tracking-wide flex items-center justify-between">
+          <span>TOURNAMENT DECKS</span>
+          <button onClick={() => window.open('/print-decks', '_blank')} className="text-sm bg-slate-800 hover:bg-cyan-600 px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+            Print Deck to PDF
+          </button>
+        </h3>
+        <div className="grid md:grid-cols-2 gap-8">
+          {/* Tournament Deck 1 */}
+          <div className="bg-slate-900 border border-yellow-500/30 rounded-xl overflow-hidden hover:border-yellow-400 transition-colors group shadow-[0_0_15px_rgba(234,179,8,0.1)]">
+            <div className="h-32 bg-gradient-to-r from-yellow-900 to-slate-900 relative">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-50"></div>
+              <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-slate-900 to-transparent">
+                <h3 className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors">Solar Singularity</h3>
+                <p className="text-yellow-500 text-sm font-semibold">Meta Tier 1 • 40 Cards</p>
+              </div>
+            </div>
+            <div className="p-4 flex gap-4">
+              <button onClick={() => setEditingDeck("Solar Singularity")} className="flex-1 bg-slate-800 hover:bg-yellow-600 text-white font-semibold py-2 rounded-lg transition-colors">
+                Edit Deck
+              </button>
+              <button onClick={() => handlePlay("Solar Singularity", 'pvp')} className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
+                Play PvP
+              </button>
+            </div>
+          </div>
+
+          {/* Tournament Deck 2 */}
+          <div className="bg-slate-900 border border-purple-500/30 rounded-xl overflow-hidden hover:border-purple-400 transition-colors group shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+            <div className="h-32 bg-gradient-to-r from-purple-900 to-emerald-900 relative">
+              <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] opacity-50"></div>
+              <div className="absolute inset-0 flex flex-col justify-end p-4 bg-gradient-to-t from-slate-900 to-transparent">
+                <h3 className="text-xl font-bold text-white group-hover:text-purple-400 transition-colors">Gaia's Loop</h3>
+                <p className="text-purple-400 text-sm font-semibold">Meta Tier 1 • 40 Cards</p>
+              </div>
+            </div>
+            <div className="p-4 flex gap-4">
+              <button onClick={() => setEditingDeck("Gaia's Loop")} className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
+                Edit Deck
+              </button>
+              <button onClick={() => handlePlay("Gaia's Loop", 'pvp')} className="flex-1 bg-slate-800 hover:bg-purple-600 text-white font-semibold py-2 rounded-lg transition-colors">
+                Play PvP
               </button>
             </div>
           </div>

@@ -51,7 +51,7 @@ export const Landing = () => {
         <div className="flex-1 relative w-full max-w-md lg:max-w-none perspective-1000">
           <div className="relative animate-in slide-in-from-right duration-1000 [transform:rotateY(-15deg)_rotateX(10deg)] hover:[transform:rotateY(0deg)_rotateX(0deg)] transition-transform duration-700">
             <img 
-              src="/card_renders/gaia_the_world-soul.png" 
+              src="https://res.cloudinary.com/dfyh7cs1g/image/upload/v1/glimmerfall/card_renders/gaia_the_world-soul.png" 
               alt="Gaia, The World-Soul" 
               className="w-full h-auto rounded-2xl shadow-[0_0_50px_rgba(6,182,212,0.5)] border border-cyan-500/50"
             />

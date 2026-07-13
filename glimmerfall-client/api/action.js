@@ -37,6 +37,12 @@ export default async function handler(req, res) {
       }
       match.current_turn += 1;
       state.log.unshift(`Turn ${match.current_turn} begins.`);
+      
+      // Clear exhaustion for the NEW active player's entities
+      const activePlayerNum = match.active_player === match.player1 ? 1 : 2;
+      state.battlefield.forEach(c => {
+         if (c.owner === activePlayerNum) c.exhausted = false;
+      });
     } else if (action === 'PLAY_CARD') {
       // payload = { zone: 'battlefield' or 'resonanceRow', card: {} }
       if (payload.zone === 'battlefield') {
@@ -45,6 +51,7 @@ export default async function handler(req, res) {
           owner: player,
           currentHealth: payload.card.health,
           keywords: parseKeywords(payload.card.description),
+          exhausted: true // Summoning sickness
         };
         state.battlefield.push(entity);
         state.log.unshift(`Player ${player} summoned ${payload.card.name}.`);
@@ -56,6 +63,7 @@ export default async function handler(req, res) {
       }
     } else if (action === 'ATTACK_VANGUARD') {
       const attacker = state.battlefield.find(c => c.id === payload.attackerId);
+      if (attacker) attacker.exhausted = true;
       const opponentNum = player === 1 ? 2 : 1;
       const guardians = state.battlefield.filter(c => c.owner === opponentNum && c.keywords?.guard);
       if (guardians.length > 0 && !attacker?.keywords?.evasive) {
@@ -76,6 +84,7 @@ export default async function handler(req, res) {
       }
     } else if (action === 'ATTACK_ENTITY') {
       const attacker = state.battlefield.find(c => c.id === payload.attackerId);
+      if (attacker) attacker.exhausted = true;
       const opponentNum = player === 1 ? 2 : 1;
       const targetIndex = state.battlefield.findIndex(c => c.id === payload.targetId);
       if (targetIndex !== -1) {

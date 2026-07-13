@@ -107,7 +107,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
       {/* Background Full Art Image */}
       <div className="absolute inset-0 z-0">
         <img 
-          src={`/card_renders/${card.name.toLowerCase().replace(/[,']/g, '').replace(/ /g, '_')}.png`} 
+          src={`https://res.cloudinary.com/dfyh7cs1g/image/upload/v1/glimmerfall/card_renders/${card.name.toLowerCase().replace(/[,']/g, '').replace(/ /g, '_')}.png`} 
           alt={card.name} 
           className="w-full h-full object-cover object-center"
           onError={(e) => {
@@ -129,36 +129,35 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
       </div>
 
       {/* Card Footer (Type, Description, Stats) */}
-      <div className={`relative z-10 ${minimal ? 'p-1.5 m-1' : 'p-3 m-2'} bg-slate-950/70 backdrop-blur-xl border border-slate-400/30 rounded-lg flex flex-col pointer-events-none shadow-inner`}>
+      <div className={`relative z-10 ${minimal ? 'p-1.5 mx-1 mb-2' : 'p-3 mx-2 mb-4'} bg-slate-950/70 backdrop-blur-xl border border-slate-400/30 rounded-lg flex flex-col pointer-events-none shadow-inner`}>
         <div className={`flex justify-between items-center mb-1 ${minimal ? 'pb-0.5' : 'pb-1'} border-b border-slate-400/20`}>
           <span className={`${minimal ? 'text-[8px]' : 'text-[10px]'} font-bold text-cyan-100 uppercase tracking-widest drop-shadow-md`}>{card.card_type}</span>
           <RarityIcon />
         </div>
         
-        <p className={`${minimal ? 'text-[8px] leading-tight line-clamp-3' : 'text-xs leading-snug min-h-[40px]'} text-slate-200 italic flex-grow drop-shadow-md`}>
-          {card.description}
-        </p>
+        <div className={`flex-grow flex ${card.description && card.description.length < 50 ? 'items-center justify-center' : 'items-start'} ${card.power != null ? (minimal ? 'pr-8 pb-2' : 'pr-12 pb-2') : ''}`}>
+          <p className={`${minimal ? 'text-[8px] leading-tight line-clamp-4' : 'text-xs leading-snug min-h-[40px]'} text-slate-200 italic drop-shadow-md w-full ${card.description && card.description.length < 50 ? 'text-center font-bold text-[10px] sm:text-sm' : ''}`}>
+            {card.description}
+          </p>
+        </div>
 
         {/* Collector Info */}
-        {!minimal && (
-          <div className="mt-2 flex justify-between items-end border-t border-white/5 pt-1 pr-14">
-            <span className="text-[8px] text-slate-500 uppercase tracking-widest font-semibold">
-              {card.set_name || 'Glimmerfall'}
-            </span>
-            <span className="text-[8px] text-slate-400 font-bold tracking-wider">
-              {card.collector_number ? card.collector_number.toString().padStart(3, '0') : ''}
-            </span>
-          </div>
-        )}
+        <div className={`mt-2 flex justify-between items-end border-t border-white/5 pt-1 ${minimal ? 'pr-8' : 'pr-14'}`}>
+          <span className={`${minimal ? 'text-[6px]' : 'text-[8px]'} text-slate-500 uppercase tracking-widest font-semibold`}>
+            {card.set_name || 'The Awakening'}
+          </span>
+          <span className={`${minimal ? 'text-[6px]' : 'text-[8px]'} text-slate-400 font-bold tracking-wider`}>
+            {card.collector_number ? card.collector_number.toString().padStart(3, '0') : ''}
+          </span>
+        </div>
 
-        {/* Only render Power/Health if they exist */}
-        {(card.power !== undefined && card.health !== undefined) && (
-          <div className={`absolute ${minimal ? '-bottom-1 -right-1 px-2 py-0.5 border' : '-bottom-2 -right-2 px-3 py-1 border-2'} bg-slate-900 border-slate-600 rounded-tl-xl rounded-br-lg shadow-[0_0_15px_rgba(0,0,0,0.8)]`}>
-            <span className={`font-black text-white ${minimal ? 'text-xs' : 'text-sm'}`}>{card.power} / {card.health}</span>
+        {/* Only render Power/Health if they exist and are not null */}
+        {(card.power != null && card.health != null) && (
+          <div className={`absolute ${minimal ? '-bottom-1.5 -right-1 px-2 py-0.5 border' : '-bottom-3 -right-2 px-3 py-1 border-2'} bg-slate-900 border-slate-600 rounded-tl-xl rounded-br-lg shadow-[0_0_15px_rgba(0,0,0,0.8)]`}>
+            <span className={`font-black text-white ${minimal ? 'text-[10px]' : 'text-sm'}`}>{card.power} / {card.health}</span>
           </div>
         )}
       </div>
-      
     </div>
   );
 };
