@@ -72,53 +72,82 @@ export const PrintDecks = () => {
 
   }, [selectedDeck, cards, userDecks, starterDecks]);
 
+  // Chunk cards into groups of 9 for A4 pages
+  const chunkedCards = [];
+  for (let i = 0; i < decklist.length; i += 9) {
+    chunkedCards.push(decklist.slice(i, i + 9));
+  }
+
   return (
-    <div className="min-h-screen bg-white">
+    <div className="min-h-screen bg-slate-200 print-container">
       <style>{`
         @media print {
           .no-print {
             display: none !important;
           }
           @page {
+            size: A4;
             margin: 0;
-            size: auto;
           }
           body {
-            margin: 1cm;
+            margin: 0;
+            background: white;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .print-container {
+            background: white !important;
+            padding: 0 !important;
+          }
+          .page-wrapper {
+            margin: 0 !important;
+            box-shadow: none !important;
+            page-break-after: always;
+            break-after: page;
           }
         }
       `}</style>
       
-      <div className="no-print p-8 bg-slate-900 text-white mb-8">
+      <div className="no-print p-8 bg-slate-900 text-white mb-8 shadow-md">
         <h1 className="text-3xl font-black text-cyan-400 mb-4">Print Deck to PDF</h1>
-        <p className="mb-4 text-slate-300">Select a deck below. The cards will render in actual physical dimensions (63mm x 88mm). Then, just use your browser's Print function (Ctrl+P / Cmd+P) and save as PDF!</p>
-        <select 
-          className="p-3 rounded bg-slate-800 border border-slate-700 text-white font-bold w-full max-w-md"
-          value={selectedDeck}
-          onChange={(e) => setSelectedDeck(e.target.value)}
-        >
-          <option value="">-- Select a Deck --</option>
-          <optgroup label="Your Decks">
-            {userDecks.map(d => (
-              <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>
-            ))}
-          </optgroup>
-          <optgroup label="Starter & Tournament Decks">
-            {starterDecks.map(d => (
-              <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>
-            ))}
-          </optgroup>
-        </select>
-        <button onClick={() => window.print()} className="ml-4 px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded font-bold transition-colors">
-          Print Now
-        </button>
+        <p className="mb-4 text-slate-300">Select a deck below. The cards will render in perfect 3x3 grids (9 cards per page) on A4 dimensions. A standard 40-card deck will cleanly fit onto 5 pages!</p>
+        <div className="flex gap-4">
+          <select 
+            className="p-3 rounded bg-slate-800 border border-slate-700 text-white font-bold w-full max-w-md"
+            value={selectedDeck}
+            onChange={(e) => setSelectedDeck(e.target.value)}
+          >
+            <option value="">-- Select a Deck --</option>
+            <optgroup label="Your Decks">
+              {userDecks.map(d => (
+                <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>
+              ))}
+            </optgroup>
+            <optgroup label="Starter & Tournament Decks">
+              {starterDecks.map(d => (
+                <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>
+              ))}
+            </optgroup>
+          </select>
+          <button onClick={() => window.print()} className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded font-bold transition-colors">
+            Print Now
+          </button>
+        </div>
       </div>
 
-      <div className="flex flex-wrap gap-[2mm] px-[1cm]">
-        {decklist.map((card, i) => (
-          <div key={i} style={{ width: '63mm', height: '88mm', position: 'relative' }}>
-            <CardTemplate card={card} minimal={false} />
-            <div className="absolute inset-0 border border-dashed border-gray-400 pointer-events-none z-50"></div>
+      <div className="print-content pb-10">
+        {chunkedCards.map((page, pageIndex) => (
+          <div 
+            key={pageIndex} 
+            className="page-wrapper bg-white mx-auto shadow-xl mb-8 flex flex-wrap content-start" 
+            style={{ width: '210mm', height: '297mm', padding: '10mm', gap: '2.5mm' }}
+          >
+            {page.map((card: any, i: number) => (
+              <div key={i} style={{ width: '61.5mm', height: '88mm', position: 'relative', flexShrink: 0 }}>
+                <CardTemplate card={card} minimal={false} />
+                <div className="absolute inset-0 border-[0.5mm] border-dashed border-gray-400 pointer-events-none z-50"></div>
+              </div>
+            ))}
           </div>
         ))}
       </div>
