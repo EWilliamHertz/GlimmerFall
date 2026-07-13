@@ -2,6 +2,7 @@ import pkg from 'pg';
 const { Pool } = pkg;
 import { resolveSpellEffect, damageNexus } from './_lib/effects.js';
 import { parseKeywords } from './_lib/keywords.js';
+import { resolveDeployTrigger, resolveDestroyTrigger } from './_lib/entityTriggers.js';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -39,13 +40,16 @@ export default async function handler(req, res) {
     } else if (action === 'PLAY_CARD') {
       // payload = { zone: 'battlefield' or 'resonanceRow', card: {} }
       if (payload.zone === 'battlefield') {
-        state.battlefield.push({
+        const entity = {
           ...payload.card,
           owner: player,
           currentHealth: payload.card.health,
           keywords: parseKeywords(payload.card.description),
-        });
+        };
+        state.battlefield.push(entity);
         state.log.unshift(`Player ${player} summoned ${payload.card.name}.`);
+        const { logs: deployLogs } = resolveDeployTrigger({ state, entity, turn: match.current_turn });
+        deployLogs.forEach(l => state.log.unshift(l));
       } else {
         state.resonanceRow.push({ ...payload.card, owner: player });
         state.log.unshift(`Player ${player} placed a node.`);
@@ -92,6 +96,8 @@ export default async function handler(req, res) {
           state.log.unshift(`${target.name} was destroyed!`);
           state.battlefield.splice(targetIndex, 1);
           state.graveyard.push(target);
+          const { logs: destroyLogs } = resolveDestroyTrigger({ state, entity: target, turn: match.current_turn });
+          destroyLogs.forEach(l => state.log.unshift(l));
           if (attacker?.keywords?.overwhelm && damage > healthBefore) {
             const excess = damage - healthBefore;
             const spillLogs = [];
@@ -107,9 +113,13 @@ export default async function handler(req, res) {
       }
     } else if (action === 'CAST_SPELL') {
       const { card, targetId, targetId2, casterHandSize } = payload;
-      const { logs, matchOver, clientHints } = resolveSpellEffect({ state, player, card, targetId, targetId2, turn: match.current_turn, casterHandSize });
+      const { logs, matchOver, clientHints, destroyed } = resolveSpellEffect({ state, player, card, targetId, targetId2, turn: match.current_turn, casterHandSize });
       state.graveyard.push({ id: card.id, name: card.name, card_type: card.card_type, owner: player });
       logs.forEach(l => state.log.unshift(l));
+      (destroyed || []).forEach(entity => {
+        const { logs: destroyLogs } = resolveDestroyTrigger({ state, entity, turn: match.current_turn });
+        destroyLogs.forEach(l => state.log.unshift(l));
+      });
       if (matchOver) {
         match.status = matchOver;
         state.log.unshift(`MATCH OVER! ${match.status}!`);

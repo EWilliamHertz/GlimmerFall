@@ -29,9 +29,10 @@
 //     Verdict's Relic destroy) — Relics don't have a battlefield home yet
 //   - "Until End Phase" durations — buffs/debuffs here are treated as
 //     permanent since there's no turn-based cleanup step yet
-//   - Entity keyword abilities entirely (Evasive, Guard, Overwhelm, Swift,
-//     Stealth, "When deployed", "When destroyed", Awakening Phase triggers) —
-//     out of scope for this pass, which is spells only
+//   - Entity keyword abilities (Guard, Evasive, Overwhelm, Stealth) are now
+//     handled in action.js's combat logic, and a small subset of "When
+//     deployed"/"When destroyed" triggers in entityTriggers.js — this file
+//     is spells only
 
 const WORD_NUMBERS = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10 };
 function parseCount(str) {
@@ -44,18 +45,19 @@ function findEntity(state, targetId) {
   return state.battlefield.find(c => c.id === targetId);
 }
 
-function destroyEntity(state, entity, logs) {
+function destroyEntity(state, entity, logs, destroyed) {
   const idx = state.battlefield.findIndex(c => c.id === entity.id);
   if (idx === -1) return;
   logs.push(`${entity.name} was destroyed!`);
   const [dead] = state.battlefield.splice(idx, 1);
   state.graveyard.push(dead);
+  if (destroyed) destroyed.push(dead);
 }
 
-function damageEntity(state, entity, amount, logs) {
+function damageEntity(state, entity, amount, logs, destroyed) {
   entity.currentHealth = (entity.currentHealth ?? entity.health) - amount;
   logs.push(`${entity.name} takes ${amount} damage.`);
-  if (entity.currentHealth <= 0) destroyEntity(state, entity, logs);
+  if (entity.currentHealth <= 0) destroyEntity(state, entity, logs, destroyed);
 }
 
 export function damageNexus(state, targetPlayer, amount, logs) {
@@ -76,19 +78,19 @@ export function damageNexus(state, targetPlayer, amount, logs) {
 
 // Named one-offs that need bespoke handling instead of a generic regex.
 const CARD_OVERRIDES = {
-  'Aetheric Blast': ({ state, player, card, targetId, casterHandSize, logs }) => {
+  'Aetheric Blast': ({ state, player, card, targetId, casterHandSize, logs, destroyed }) => {
     const target = findEntity(state, targetId);
     const amount = casterHandSize ?? 0;
-    if (target && target.owner !== player) damageEntity(state, target, amount, logs);
+    if (target && target.owner !== player) damageEntity(state, target, amount, logs, destroyed);
     else logs.push(`${card.name} needed a valid enemy Entity target.`);
     return true;
   },
-  'Soul Tithe': ({ state, player, card, logs }) => {
+  'Soul Tithe': ({ state, player, card, logs, destroyed }) => {
     const opponent = player === 1 ? 2 : 1;
     const foes = state.battlefield.filter(c => c.owner === opponent);
     if (foes.length === 0) { logs.push(`${card.name} found no target.`); return true; }
     const lowest = foes.reduce((a, b) => (a.power ?? 0) <= (b.power ?? 0) ? a : b);
-    destroyEntity(state, lowest, logs);
+    destroyEntity(state, lowest, logs, destroyed);
     return true;
   },
   'Verdant Reclaim': ({ state, player, card, logs, clientHints }) => {
@@ -137,10 +139,11 @@ export function resolveSpellEffect({ state, player, card, targetId, targetId2, t
   const desc = card.description || '';
   const logs = [];
   const clientHints = { draw: 0, discard: 0, returnedCardToHand: null };
+  const destroyed = [];
   const opponent = player === 1 ? 2 : 1;
 
   if (CARD_OVERRIDES[card.name]) {
-    CARD_OVERRIDES[card.name]({ state, player, card, targetId, targetId2, turn, casterHandSize, logs, clientHints });
+    CARD_OVERRIDES[card.name]({ state, player, card, targetId, targetId2, turn, casterHandSize, logs, clientHints, destroyed });
   } else {
     const explicitTarget = targetId && targetId !== 'battlefield' && targetId !== 'opponent_vanguard'
       ? findEntity(state, targetId)
@@ -163,11 +166,11 @@ export function resolveSpellEffect({ state, player, card, targetId, targetId2, t
     if (dmgMatch) {
       const amount = parseInt(dmgMatch[1], 10);
       if (aoeEnemy) {
-        state.battlefield.filter(c => c.owner !== player).forEach(e => damageEntity(state, e, amount, logs));
+        state.battlefield.filter(c => c.owner !== player).forEach(e => damageEntity(state, e, amount, logs, destroyed));
       } else if (aoeAllBoard) {
-        [...state.battlefield].forEach(e => damageEntity(state, e, amount, logs));
+        [...state.battlefield].forEach(e => damageEntity(state, e, amount, logs, destroyed));
       } else if (explicitTarget) {
-        damageEntity(state, explicitTarget, amount, logs);
+        damageEntity(state, explicitTarget, amount, logs, destroyed);
       } else {
         damageNexus(state, opponent, amount, logs);
       }
@@ -177,10 +180,10 @@ export function resolveSpellEffect({ state, player, card, targetId, targetId2, t
     if (destroyThreshold) {
       const threshold = parseInt(destroyThreshold[1], 10);
       const cmp = destroyThreshold[2].toLowerCase() === 'greater' ? (p => p >= threshold) : (p => p <= threshold);
-      [...state.battlefield].filter(e => cmp(e.power ?? 0)).forEach(e => destroyEntity(state, e, logs));
+      [...state.battlefield].filter(e => cmp(e.power ?? 0)).forEach(e => destroyEntity(state, e, logs, destroyed));
       handled = true;
     } else if (destroyMatch && explicitTarget) {
-      destroyEntity(state, explicitTarget, logs);
+      destroyEntity(state, explicitTarget, logs, destroyed);
       handled = true;
     }
 
@@ -239,6 +242,6 @@ export function resolveSpellEffect({ state, player, card, targetId, targetId2, t
     matchOver = state.player1_hp <= 0 ? 'PLAYER 2 WINS' : 'PLAYER 1 WINS';
   }
 
-  return { logs, matchOver, clientHints };
+  return { logs, matchOver, clientHints, destroyed };
 }
 
