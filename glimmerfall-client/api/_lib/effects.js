@@ -58,7 +58,7 @@ function damageEntity(state, entity, amount, logs) {
   if (entity.currentHealth <= 0) destroyEntity(state, entity, logs);
 }
 
-function damageNexus(state, targetPlayer, amount, logs) {
+export function damageNexus(state, targetPlayer, amount, logs) {
   const shieldKey = `player${targetPlayer}_shield`;
   let shield = state[shieldKey] || 0;
   let remaining = amount;

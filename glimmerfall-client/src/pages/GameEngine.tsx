@@ -257,11 +257,15 @@ export default function GameEngine() {
   };
 
   const sendAction = async (action: string, payload: any = {}) => {
-    await fetch('/api/action', {
+    const postRes = await fetch('/api/action', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ matchId, player: playerNum, action, payload })
     });
+    const postData = await postRes.json();
+    if (postData.error) {
+      setTurnLog(prev => [postData.error, ...prev]);
+    }
     // Optimistically fetch state immediately
     const res = await fetch(`/api/match?id=${matchId}`);
     const data = await res.json();
@@ -325,6 +329,11 @@ export default function GameEngine() {
         battlefield.find(c => c.id === over.id)
       ) {
         if (isSpell(card)) {
+          const spellTarget = opponentBattlefield.find(c => c.id === over.id) || battlefield.find(c => c.id === over.id);
+          if (spellTarget?.keywords?.stealth && spellTarget.owner !== playerNum) {
+            setTurnLog(prev => [`${spellTarget.name} has Stealth and can't be targeted.`, ...prev]);
+            return;
+          }
           if (energy < card.cost) {
             setTurnLog(prev => [`Not enough energy to cast ${card.name}.`, ...prev]);
             return;
@@ -350,11 +359,26 @@ export default function GameEngine() {
       }
 
       if (over.id === 'opponent_vanguard') {
+        const guardians = opponentBattlefield.filter(c => c.keywords?.guard);
+        if (guardians.length > 0 && !card.keywords?.evasive) {
+          setTurnLog(prev => [`${card.name} must attack a Guard Entity — the opponent has one in play!`, ...prev]);
+          return;
+        }
         setAttackedThisTurn(prev => [...prev, card.id]);
-        await sendAction('ATTACK_VANGUARD', { power: card.power });
+        await sendAction('ATTACK_VANGUARD', { power: card.power, attackerId: card.id });
       } else if (opponentBattlefield.find(c => c.id === over.id)) {
+        const target = opponentBattlefield.find(c => c.id === over.id);
+        if (target?.keywords?.stealth) {
+          setTurnLog(prev => [`${target.name} has Stealth and can't be targeted.`, ...prev]);
+          return;
+        }
+        const guardians = opponentBattlefield.filter(c => c.keywords?.guard);
+        if (guardians.length > 0 && !target?.keywords?.guard && !card.keywords?.evasive) {
+          setTurnLog(prev => [`${card.name} must attack a Guard Entity — the opponent has one in play!`, ...prev]);
+          return;
+        }
         setAttackedThisTurn(prev => [...prev, card.id]);
-        await sendAction('ATTACK_ENTITY', { targetId: over.id, power: card.power });
+        await sendAction('ATTACK_ENTITY', { targetId: over.id, power: card.power, attackerId: card.id });
       }
     }
   }

@@ -1,6 +1,7 @@
 import pkg from 'pg';
 const { Pool } = pkg;
-import { resolveSpellEffect } from './_lib/effects.js';
+import { resolveSpellEffect, damageNexus } from './_lib/effects.js';
+import { parseKeywords } from './_lib/keywords.js';
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -38,32 +39,70 @@ export default async function handler(req, res) {
     } else if (action === 'PLAY_CARD') {
       // payload = { zone: 'battlefield' or 'resonanceRow', card: {} }
       if (payload.zone === 'battlefield') {
-        state.battlefield.push({ ...payload.card, owner: player, currentHealth: payload.card.health });
+        state.battlefield.push({
+          ...payload.card,
+          owner: player,
+          currentHealth: payload.card.health,
+          keywords: parseKeywords(payload.card.description),
+        });
         state.log.unshift(`Player ${player} summoned ${payload.card.name}.`);
       } else {
         state.resonanceRow.push({ ...payload.card, owner: player });
         state.log.unshift(`Player ${player} placed a node.`);
       }
     } else if (action === 'ATTACK_VANGUARD') {
+      const attacker = state.battlefield.find(c => c.id === payload.attackerId);
+      const opponentNum = player === 1 ? 2 : 1;
+      const guardians = state.battlefield.filter(c => c.owner === opponentNum && c.keywords?.guard);
+      if (guardians.length > 0 && !attacker?.keywords?.evasive) {
+        throw new Error(`${attacker?.name || 'Your Entity'} must attack a Guard Entity — the opponent has one in play!`);
+      }
       const damage = payload.power;
       if (player === 1) state.player2_hp -= damage;
       else state.player1_hp -= damage;
       state.log.unshift(`Player ${player} attacked the vanguard for ${damage} damage!`);
-      
+      if (attacker?.keywords?.stealth) {
+        attacker.keywords.stealth = false;
+        state.log.unshift(`${attacker.name}'s Stealth fades after attacking.`);
+      }
+
       if (state.player1_hp <= 0 || state.player2_hp <= 0) {
         match.status = state.player1_hp <= 0 ? 'PLAYER 2 WINS' : 'PLAYER 1 WINS';
         state.log.unshift(`MATCH OVER! ${match.status}!`);
       }
     } else if (action === 'ATTACK_ENTITY') {
-      const damage = payload.power;
+      const attacker = state.battlefield.find(c => c.id === payload.attackerId);
+      const opponentNum = player === 1 ? 2 : 1;
       const targetIndex = state.battlefield.findIndex(c => c.id === payload.targetId);
       if (targetIndex !== -1) {
-        state.battlefield[targetIndex].currentHealth -= damage;
-        state.log.unshift(`Player ${player} dealt ${damage} damage to ${state.battlefield[targetIndex].name}!`);
-        if (state.battlefield[targetIndex].currentHealth <= 0) {
-          state.log.unshift(`${state.battlefield[targetIndex].name} was destroyed!`);
-          const [dead] = state.battlefield.splice(targetIndex, 1);
-          state.graveyard.push(dead);
+        const target = state.battlefield[targetIndex];
+        if (target.keywords?.stealth) {
+          throw new Error(`${target.name} has Stealth and can't be targeted.`);
+        }
+        const guardians = state.battlefield.filter(c => c.owner === opponentNum && c.keywords?.guard);
+        if (guardians.length > 0 && !target.keywords?.guard && !attacker?.keywords?.evasive) {
+          throw new Error(`${attacker?.name || 'Your Entity'} must attack a Guard Entity — the opponent has one in play!`);
+        }
+
+        const damage = payload.power;
+        const healthBefore = target.currentHealth;
+        target.currentHealth -= damage;
+        state.log.unshift(`Player ${player} dealt ${damage} damage to ${target.name}!`);
+        if (target.currentHealth <= 0) {
+          state.log.unshift(`${target.name} was destroyed!`);
+          state.battlefield.splice(targetIndex, 1);
+          state.graveyard.push(target);
+          if (attacker?.keywords?.overwhelm && damage > healthBefore) {
+            const excess = damage - healthBefore;
+            const spillLogs = [];
+            damageNexus(state, opponentNum, excess, spillLogs);
+            for (let i = spillLogs.length - 1; i >= 0; i--) state.log.unshift(spillLogs[i]);
+            state.log.unshift(`${attacker.name}'s Overwhelm spills ${excess} damage to the enemy Nexus!`);
+          }
+        }
+        if (attacker?.keywords?.stealth) {
+          attacker.keywords.stealth = false;
+          state.log.unshift(`${attacker.name}'s Stealth fades after attacking.`);
         }
       }
     } else if (action === 'CAST_SPELL') {
