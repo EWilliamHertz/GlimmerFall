@@ -100,10 +100,30 @@ export default async function handler(req, res) {
         const damage = payload.power;
         const healthBefore = target.currentHealth;
         target.currentHealth -= damage;
-        state.log.unshift(`Player ${player} dealt ${damage} damage to ${target.name}!`);
+        
+        let counterDamageStr = "";
+        if (target.power && target.power > 0) {
+          attacker.currentHealth -= target.power;
+          counterDamageStr = ` and took ${target.power} damage back`;
+        }
+        
+        state.log.unshift(`Player ${player} dealt ${damage} damage to ${target.name}${counterDamageStr}!`);
+        
+        // Handle attacker death
+        if (attacker.currentHealth <= 0) {
+          state.log.unshift(`${attacker.name} was destroyed in combat!`);
+          const attackerIndex = state.battlefield.findIndex(c => c.id === payload.attackerId);
+          if (attackerIndex !== -1) state.battlefield.splice(attackerIndex, 1);
+          state.graveyard.push(attacker);
+          const { logs: destroyLogs } = resolveDestroyTrigger({ state, entity: attacker, turn: match.current_turn });
+          destroyLogs.forEach(l => state.log.unshift(l));
+        }
+
+        // Handle target death
         if (target.currentHealth <= 0) {
           state.log.unshift(`${target.name} was destroyed!`);
-          state.battlefield.splice(targetIndex, 1);
+          const newTargetIndex = state.battlefield.findIndex(c => c.id === payload.targetId);
+          if (newTargetIndex !== -1) state.battlefield.splice(newTargetIndex, 1);
           state.graveyard.push(target);
           const { logs: destroyLogs } = resolveDestroyTrigger({ state, entity: target, turn: match.current_turn });
           destroyLogs.forEach(l => state.log.unshift(l));

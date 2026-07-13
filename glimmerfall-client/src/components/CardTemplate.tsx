@@ -135,18 +135,21 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
           <RarityIcon />
         </div>
         
-        <div className={`flex-grow flex ${card.description && card.description.length < 50 ? 'items-center justify-center' : 'items-start'} ${card.power != null ? (minimal ? 'pr-8 pb-2' : 'pr-12 pb-2') : ''}`}>
-          <p className={`${minimal ? 'text-[8px] leading-tight line-clamp-4' : 'text-xs leading-snug min-h-[40px]'} text-slate-200 italic drop-shadow-md w-full ${card.description && card.description.length < 50 ? 'text-center font-bold text-[10px] sm:text-sm' : ''}`}>
+        <div className="flex-grow relative h-full">
+          {card.power != null && card.health != null && (
+             <div style={{ float: 'right', width: minimal ? '35px' : '65px', height: minimal ? '20px' : '40px', shapeOutside: 'inset(0)' }}></div>
+          )}
+          <p className={`${minimal ? 'text-[8px] leading-tight line-clamp-4' : 'text-xs leading-snug line-clamp-[6]'} text-slate-200 italic drop-shadow-md ${card.description && card.description.length < 50 ? 'text-center font-bold text-[10px] sm:text-sm mt-2' : ''}`}>
             {card.description}
           </p>
         </div>
 
         {/* Collector Info */}
-        <div className={`mt-2 flex justify-between items-end border-t border-white/5 pt-1 ${minimal ? 'pr-8' : 'pr-14'}`}>
-          <span className={`${minimal ? 'text-[6px]' : 'text-[8px]'} text-slate-500 uppercase tracking-widest font-semibold`}>
+        <div className={`mt-2 flex flex-col justify-start items-start border-t border-white/5 pt-1 ${minimal ? 'pr-8' : 'pr-14'}`}>
+          <span className={`${minimal ? 'text-[6px]' : 'text-[8px]'} text-slate-500 uppercase tracking-widest font-semibold leading-none mb-0.5`}>
             {card.set_name || 'The Awakening'}
           </span>
-          <span className={`${minimal ? 'text-[6px]' : 'text-[8px]'} text-slate-400 font-bold tracking-wider`}>
+          <span className={`${minimal ? 'text-[5px]' : 'text-[7px]'} text-slate-400 font-bold tracking-wider leading-none`}>
             {card.collector_number ? card.collector_number.toString().padStart(3, '0') : ''}
           </span>
         </div>
