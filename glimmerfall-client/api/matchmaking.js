@@ -24,7 +24,7 @@ export default async function handler(req, res) {
           const initialState = {
             player1_hp: 20, player2_hp: 20,
             player1_hand: 5, player2_hand: 5,
-            battlefield: [], resonanceRow: [], graveyard: [],
+            battlefield: [], resonanceRow: [], graveyard: [], pendingReturns: [], player1_shield: 0, player2_shield: 0,
             log: ['Match started!']
           };
           await client.query("UPDATE matches SET player2 = $1, status = 'PLAYING', state = $2 WHERE id = $3", [username, initialState, match.id]);
@@ -48,7 +48,7 @@ export default async function handler(req, res) {
         const initialState = {
           player1_hp: 20, player2_hp: 20,
           player1_hand: 5, player2_hand: 5,
-          battlefield: [], resonanceRow: [], graveyard: [],
+          battlefield: [], resonanceRow: [], graveyard: [], pendingReturns: [], player1_shield: 0, player2_shield: 0,
           log: ['Match started!']
         };
         await client.query("UPDATE matches SET player2 = $1, status = 'PLAYING', state = $2 WHERE id = $3", [username, initialState, matchId]);

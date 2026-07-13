@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { DndContext, type DragEndEvent, type DragStartEvent, DragOverlay, useDroppable } from '@dnd-kit/core'
 import { DropZone } from '../components/DropZone'
 import { Card } from '../components/Card'
@@ -19,17 +19,10 @@ function EntityDropZone({ id, children }: { id: string, children: React.ReactNod
   );
 }
 
-// Draw/energy effects only make sense client-side, since hand and energy
-// aren't tracked in the server's authoritative match state.
-const getClientOnlyEffects = (card: any) => {
-  const desc = card.description || '';
-  const drawMatch = desc.match(/draw\s+(a card|\d+\s+cards?)/i);
-  const energyMatch = desc.match(/gain\s+(\d+)\s+energy/i);
-  return {
-    draw: drawMatch ? (drawMatch[1].startsWith('a') ? 1 : parseInt(drawMatch[1])) : 0,
-    energy: energyMatch ? parseInt(energyMatch[1]) : 0,
-  };
-}
+// card_type is actually "Spell — Fast" / "Spell — Slow" (with an em dash),
+// never the bare string "Spell" — match on prefix, not exact equality.
+const isSpell = (card: any) => !!card.card_type?.startsWith('Spell');
+const isRelic = (card: any) => card.card_type === 'Relic';
 
 // A spell "requires a target" if its text talks about an entity/creature —
 // otherwise it can be cast by dropping it on your own battlefield with no target.
@@ -138,6 +131,49 @@ export default function GameEngine() {
     }
   }, [matchStatus]);
 
+  const claimedReturnIds = useRef<Set<string>>(new Set());
+
+  const syncStateFromServer = (data: any) => {
+    if (data.error) return;
+    setMatchStatus(data.status);
+    setActivePlayer(data.active_player);
+    if (data.current_turn !== undefined) setTurn(data.current_turn);
+
+    const state = data.state || {};
+    if (playerNum === 1) {
+      setPlayerHp(state.player1_hp);
+      setOpponentHp(state.player2_hp);
+    } else {
+      setPlayerHp(state.player2_hp);
+      setOpponentHp(state.player1_hp);
+    }
+
+    if (state.log) setTurnLog(state.log);
+
+    if (state.battlefield) {
+      setBattlefield(state.battlefield.filter((c: any) => c.owner === playerNum));
+      setOpponentBattlefield(state.battlefield.filter((c: any) => c.owner !== playerNum));
+    }
+    if (state.resonanceRow) {
+      setResonanceRow(state.resonanceRow.filter((c: any) => c.owner === playerNum));
+      setOpponentResonance(state.resonanceRow.filter((c: any) => c.owner !== playerNum));
+    }
+    if (state.graveyard) {
+      setGraveyard(state.graveyard.filter((c: any) => c.owner === playerNum));
+      setOpponentGraveyard(state.graveyard.filter((c: any) => c.owner !== playerNum));
+    }
+
+    // Claim any cards a spell (e.g. Chrono Shift) has returned to our hand
+    if (state.pendingReturns) {
+      const mine = state.pendingReturns.filter((r: any) => r.owner === playerNum && !claimedReturnIds.current.has(r.returnId));
+      mine.forEach((r: any) => {
+        claimedReturnIds.current.add(r.returnId);
+        setHand(prev => [...prev, { ...r.card, id: `${r.card.id}_${r.returnId}` }]);
+        sendAction('CLAIM_RETURN', { returnId: r.returnId });
+      });
+    }
+  };
+
   // Poll Match State
   useEffect(() => {
     if (!matchId) return;
@@ -145,35 +181,7 @@ export default function GameEngine() {
       try {
         const res = await fetch(`/api/match?id=${matchId}`);
         const data = await res.json();
-        if (data.error) return;
-        
-        setMatchStatus(data.status);
-        setActivePlayer(data.active_player);
-        setTurn(data.current_turn);
-        
-        const state = data.state || {};
-        if (playerNum === 1) {
-          setPlayerHp(state.player1_hp);
-          setOpponentHp(state.player2_hp);
-        } else {
-          setPlayerHp(state.player2_hp);
-          setOpponentHp(state.player1_hp);
-        }
-
-        if (state.log) setTurnLog(state.log);
-
-        if (state.battlefield) {
-          setBattlefield(state.battlefield.filter((c: any) => c.owner === playerNum));
-          setOpponentBattlefield(state.battlefield.filter((c: any) => c.owner !== playerNum));
-        }
-        if (state.resonanceRow) {
-          setResonanceRow(state.resonanceRow.filter((c: any) => c.owner === playerNum));
-          setOpponentResonance(state.resonanceRow.filter((c: any) => c.owner !== playerNum));
-        }
-        if (state.graveyard) {
-          setGraveyard(state.graveyard.filter((c: any) => c.owner === playerNum));
-          setOpponentGraveyard(state.graveyard.filter((c: any) => c.owner !== playerNum));
-        }
+        syncStateFromServer(data);
       } catch (err) {
         console.error(err);
       }
@@ -223,6 +231,31 @@ export default function GameEngine() {
     }
   };
 
+  const applySpellHints = (data: any) => {
+    const hints = data?.state?._lastClientHints;
+    if (!hints) return;
+    if (hints.draw > 0) {
+      setDeckIndex(currentIndex => {
+        const drawn = fullDeck.slice(currentIndex, currentIndex + hints.draw);
+        setHand(prev => [...prev, ...drawn]);
+        return currentIndex + drawn.length;
+      });
+    }
+    if (hints.discard > 0) {
+      // No selection UI yet — auto-discards the oldest cards in hand.
+      setHand(prev => {
+        const toDiscard = prev.slice(0, hints.discard);
+        if (toDiscard.length > 0) {
+          setTurnLog(log => [`Discarded ${toDiscard.map((c: any) => c.name).join(', ')}.`, ...log]);
+        }
+        return prev.slice(hints.discard);
+      });
+    }
+    if (hints.returnedCardToHand) {
+      setHand(prev => [...prev, { ...hints.returnedCardToHand, id: `${hints.returnedCardToHand.id}_reclaimed_${Date.now()}` }]);
+    }
+  };
+
   const sendAction = async (action: string, payload: any = {}) => {
     await fetch('/api/action', {
       method: 'POST',
@@ -232,16 +265,8 @@ export default function GameEngine() {
     // Optimistically fetch state immediately
     const res = await fetch(`/api/match?id=${matchId}`);
     const data = await res.json();
-    setActivePlayer(data.active_player);
-    const state = data.state || {};
-    if (playerNum === 1) {
-      setPlayerHp(state.player1_hp);
-      setOpponentHp(state.player2_hp);
-    } else {
-      setPlayerHp(state.player2_hp);
-      setOpponentHp(state.player1_hp);
-    }
-    if (state.log) setTurnLog(state.log);
+    syncStateFromServer(data);
+    return data;
   };
 
   const handleDragStart = (event: DragStartEvent) => {
@@ -260,8 +285,12 @@ export default function GameEngine() {
 
     // Play from Hand
     if (hand.find(c => c.id === card.id)) {
+      if (isRelic(card)) {
+        setTurnLog(prev => [`Relics aren't supported yet — ${card.name} can't be played.`, ...prev]);
+        return;
+      }
       if (over.id === 'battlefield') {
-        if (card.card_type === 'Spell') {
+        if (isSpell(card)) {
           if (spellRequiresEntityTarget(card)) {
             setTurnLog(prev => [`${card.name} needs a target — drop it on an entity or the enemy Vanguard.`, ...prev]);
             return;
@@ -270,16 +299,11 @@ export default function GameEngine() {
             setTurnLog(prev => [`Not enough energy to cast ${card.name}.`, ...prev]);
             return;
           }
+          const handSizeAfterCast = hand.length - 1;
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
-          await sendAction('CAST_SPELL', { card, targetId: null });
-          const { draw, energy: energyGain } = getClientOnlyEffects(card);
-          if (draw > 0 && deckIndex < fullDeck.length) {
-            const drawn = fullDeck.slice(deckIndex, deckIndex + draw);
-            setHand(prev => [...prev, ...drawn]);
-            setDeckIndex(d => d + drawn.length);
-          }
-          if (energyGain > 0) setEnergy(e => e + energyGain);
+          const data = await sendAction('CAST_SPELL', { card, targetId: null, casterHandSize: handSizeAfterCast });
+          applySpellHints(data);
           return;
         }
         if (energy >= card.cost) {
@@ -300,21 +324,16 @@ export default function GameEngine() {
         opponentBattlefield.find(c => c.id === over.id) ||
         battlefield.find(c => c.id === over.id)
       ) {
-        if (card.card_type === 'Spell') {
+        if (isSpell(card)) {
           if (energy < card.cost) {
             setTurnLog(prev => [`Not enough energy to cast ${card.name}.`, ...prev]);
             return;
           }
+          const handSizeAfterCast = hand.length - 1;
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
-          await sendAction('CAST_SPELL', { card, targetId: over.id as string });
-          const { draw, energy: energyGain } = getClientOnlyEffects(card);
-          if (draw > 0 && deckIndex < fullDeck.length) {
-            const drawn = fullDeck.slice(deckIndex, deckIndex + draw);
-            setHand(prev => [...prev, ...drawn]);
-            setDeckIndex(d => d + drawn.length);
-          }
-          if (energyGain > 0) setEnergy(e => e + energyGain);
+          const data = await sendAction('CAST_SPELL', { card, targetId: over.id as string, casterHandSize: handSizeAfterCast });
+          applySpellHints(data);
         }
       }
     } 
