@@ -24,13 +24,9 @@ export default function TutorialEngine() {
   const [opponentHp, setOpponentHp] = useState(20);
   const [turnLog, setTurnLog] = useState<string[]>([]);
   
-  const [hand, setHand] = useState<any[]>([
-    { id: 'c3', name: 'Aether Sprite', cost: 1, power: 1, health: 1, rarity: 'Common', card_type: 'Entity' },
-    { id: 'c4', name: 'Solar Flare', cost: 3, card_type: 'Spell', description: 'Deal 3 damage to any target.' },
-    { id: 'c5', name: 'Dawnblade Templar', cost: 4, power: 5, health: 4, rarity: 'Rare', card_type: 'Entity' }
-  ]);
-  const [deckIndex, setDeckIndex] = useState(0);
-
+  const [deck, setDeck] = useState<any[]>([]);
+  const [hand, setHand] = useState<any[]>([]);
+  
   const [battlefield, setBattlefield] = useState<any[]>([]);
   const [resonanceRow, setResonanceRow] = useState<any[]>([]);
   
@@ -45,12 +41,51 @@ export default function TutorialEngine() {
 
   const isPlayerTurn = matchStatus === 'PLAYING' && activePlayer === username;
 
+  useEffect(() => {
+    const activeDeckName = localStorage.getItem('glimmerfall_active_deck') || "Nature's Wrath";
+    
+    Promise.all([
+      fetch(`/api/decks?username=${encodeURIComponent(username)}`).then(r => r.json()),
+      fetch('/api/starter-decks').then(r => r.json()),
+      fetch('/api/cards').then(r => r.json())
+    ]).then(([userDecksData, starterDecksData, cardsData]) => {
+      const allCards = cardsData.cards || [];
+      const userDecks = userDecksData.decks || [];
+      const starterDecks = starterDecksData.starter_decks || [];
+      
+      let targetDeck = userDecks.find((d:any) => d.deck_name === activeDeckName) || 
+                       starterDecks.find((d:any) => d.deck_name === activeDeckName) ||
+                       starterDecks[0];
+                       
+      if (targetDeck && targetDeck.cards) {
+        const flatDeck: any[] = [];
+        targetDeck.cards.forEach((c: any) => {
+          const cardObj = allCards.find((dbCard:any) => dbCard.name === c.card_name);
+          if (cardObj) {
+            for(let i=0; i<c.count; i++) {
+              flatDeck.push({...cardObj, id: Math.random().toString(36).substr(2, 9), exhausted: false});
+            }
+          }
+        });
+        
+        // Shuffle
+        for (let i = flatDeck.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [flatDeck[i], flatDeck[j]] = [flatDeck[j], flatDeck[i]];
+        }
+        
+        setDeck(flatDeck);
+      }
+    });
+  }, [username]);
+
   // Reset energy on turn start
   useEffect(() => {
     if (isPlayerTurn) {
       setEnergy(resonanceRow.length);
       setHasDrawnThisTurn(false);
       setHasResonatedThisTurn(false);
+      setBattlefield(prev => prev.map(c => ({...c, exhausted: false})));
     }
   }, [activePlayer, isPlayerTurn]);
 
@@ -58,6 +93,11 @@ export default function TutorialEngine() {
     setMatchStatus('PLAYING');
     setActivePlayer(username);
     setTurnLog(['Welcome to the Tutorial! Drag cards to play.']);
+    
+    // Draw 5 starting cards
+    const startingHand = deck.slice(0, 5);
+    setHand(startingHand);
+    setDeck(prev => prev.slice(5));
   };
 
   const sendAction = (action: string, payload: any = {}) => {
@@ -132,7 +172,8 @@ export default function TutorialEngine() {
     // Attack from Battlefield
     else if (battlefield.find(c => c.id === card.id)) {
       if (over.id === 'opponent_vanguard') {
-        if (!card.power) return;
+        if (!card.power || card.exhausted) return;
+        setBattlefield(prev => prev.map(c => c.id === card.id ? {...c, exhausted: true} : c));
         sendAction('ATTACK_VANGUARD', { power: card.power });
       }
     }
@@ -143,13 +184,10 @@ export default function TutorialEngine() {
   }
 
   const drawCard = () => {
-    if (hasDrawnThisTurn || !isPlayerTurn) return;
-    const possibleDraws = [
-      { id: 'd1'+Math.random(), name: 'Eclipse Ritual', cost: 5, power: 5, health: 5, rarity: 'Epic', card_type: 'Entity' },
-      { id: 'd2'+Math.random(), name: 'Gilded Pegasus', cost: 3, power: 3, health: 4, rarity: 'Rare', card_type: 'Entity' }
-    ];
-    setHand(prev => [...prev, possibleDraws[deckIndex % 2]]);
-    setDeckIndex(d => d + 1);
+    if (hasDrawnThisTurn || !isPlayerTurn || deck.length === 0) return;
+    const drawn = deck[0];
+    setHand(prev => [...prev, drawn]);
+    setDeck(prev => prev.slice(1));
     setHasDrawnThisTurn(true);
   }
 
@@ -269,8 +307,15 @@ export default function TutorialEngine() {
         <div className="flex flex-col gap-4">
           <DropZone id="battlefield" title="Your Battlefield">
             {battlefield.map(c => (
-              <div key={c.id} className="animate-in slide-in-from-bottom-8 fade-in zoom-in-75 duration-500">
+              <div key={c.id} className={`relative animate-in slide-in-from-bottom-8 fade-in zoom-in-75 duration-500 ${c.exhausted ? 'opacity-50 grayscale-[50%]' : ''}`}>
                 <Card {...c} />
+                {c.exhausted && (
+                  <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center backdrop-blur-[2px] z-50 pointer-events-none">
+                    <div className="bg-red-900/80 border border-red-500 px-3 py-1 rounded text-red-100 font-black tracking-widest text-xs rotate-[-15deg] shadow-[0_0_15px_rgba(220,38,38,0.5)]">
+                      EXHAUSTED
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </DropZone>
