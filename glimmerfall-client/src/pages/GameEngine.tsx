@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { DndContext, type DragEndEvent, type DragStartEvent, DragOverlay, useDroppable } from '@dnd-kit/core'
 import { DropZone } from '../components/DropZone'
 import { Card } from '../components/Card'
+import { CardTemplate } from '../components/CardTemplate'
 import { User, ShieldAlert, Zap, Loader2, Swords, Book } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { STARTER_DECK_KEYS } from '../constants/starterDecks';
@@ -57,6 +58,7 @@ export default function GameEngine() {
   const [turnLog, setTurnLog] = useState<string[]>([]);
   const [fullDeck, setFullDeck] = useState<any[]>([]);
   
+  const [opponentHandSize, setOpponentHandSize] = useState(5);
   const [hand, setHand] = useState<any[]>([]);
   const [deckIndex, setDeckIndex] = useState(0);
 
@@ -74,6 +76,9 @@ export default function GameEngine() {
   const [hasResonatedThisTurn, setHasResonatedThisTurn] = useState(false);
   const [attackedThisTurn, setAttackedThisTurn] = useState<string[]>([]);
 
+  const [mulliganCount, setMulliganCount] = useState(0);
+  const [hasKeptHand, setHasKeptHand] = useState(false);
+
   const isPlayerTurn = matchStatus === 'PLAYING' && activePlayer === username;
 
   // Load User Decks for Lobby
@@ -89,7 +94,7 @@ export default function GameEngine() {
 
   // Load Active Deck into Game
   useEffect(() => {
-    if (activeDeckName && matchStatus === 'PLAYING') {
+    if (activeDeckName && (matchStatus === 'PLAYING' || matchStatus === 'MULLIGAN') && fullDeck.length === 0) {
       Promise.all([
         fetch(`/api/decks?username=${encodeURIComponent(username)}`).then(r => r.json()),
         fetch('/api/cards').then(r => r.json()),
@@ -130,6 +135,7 @@ export default function GameEngine() {
   }, [matchStatus]);
 
   const claimedReturnIds = useRef<Set<string>>(new Set());
+  const claimedHintIds = useRef<Set<string>>(new Set());
 
   const syncStateFromServer = (data: any) => {
     if (data.error) return;
@@ -141,9 +147,11 @@ export default function GameEngine() {
     if (playerNum === 1) {
       setPlayerHp(state.player1_hp);
       setOpponentHp(state.player2_hp);
+      setOpponentHandSize(state.player2_hand ?? 5);
     } else {
       setPlayerHp(state.player2_hp);
       setOpponentHp(state.player1_hp);
+      setOpponentHandSize(state.player1_hand ?? 5);
     }
 
     if (state.log) setTurnLog(state.log);
@@ -168,6 +176,51 @@ export default function GameEngine() {
         claimedReturnIds.current.add(r.returnId);
         setHand(prev => [...prev, { ...r.card, id: `${r.card.id}_${r.returnId}` }]);
         sendAction('CLAIM_RETURN', { returnId: r.returnId });
+      });
+    }
+
+    if (state.pendingHints) {
+      const myHints = state.pendingHints.filter((h: any) => !claimedHintIds.current.has(h.id));
+      myHints.forEach((h: any) => {
+        claimedHintIds.current.add(h.id);
+        
+        let shouldDraw = 0;
+        let shouldDiscard = 0;
+        
+        if (h.sourcePlayer === playerNum && h.draw > 0) shouldDraw += h.draw;
+        if (h.sourcePlayer === playerNum && h.discard > 0) shouldDiscard += h.discard;
+        if (h.sourcePlayer !== playerNum && h.opponentDiscard > 0) shouldDiscard += h.opponentDiscard;
+        
+        if (shouldDraw > 0) {
+          setDeckIndex(currentIndex => {
+            const drawn = fullDeck.slice(currentIndex, currentIndex + shouldDraw);
+            setHand(prev => [...prev, ...drawn]);
+            return currentIndex + drawn.length;
+          });
+        }
+        if (shouldDiscard > 0) {
+          setHand(prev => {
+            const toDiscard = prev.slice(0, shouldDiscard);
+            if (toDiscard.length > 0) {
+              setTurnLog(log => [`Discarded ${toDiscard.map((c: any) => c.name).join(', ')}.`, ...log]);
+            }
+            return prev.slice(shouldDiscard);
+          });
+        }
+        if (h.sourcePlayer === playerNum && h.putGlimmerNode > 0) {
+          setDeckIndex(currentIndex => {
+            const nodeCards = fullDeck.slice(currentIndex, currentIndex + h.putGlimmerNode);
+            nodeCards.forEach((nc, i) => {
+               setTimeout(() => sendAction('PLAY_CARD', { zone: 'resonanceRow', card: { id: nc.id, isFacedownNode: true } }), i * 100);
+            });
+            return currentIndex + h.putGlimmerNode;
+          });
+        }
+        if (h.sourcePlayer === playerNum && h.returnedCardToHand) {
+          setHand(prev => [...prev, { ...h.returnedCardToHand, id: `${h.returnedCardToHand.id}_reclaimed_${Date.now()}` }]);
+        }
+        
+        sendAction('CLAIM_HINT', { hintId: h.id });
       });
     }
   };
@@ -229,30 +282,13 @@ export default function GameEngine() {
     }
   };
 
-  const applySpellHints = (data: any) => {
-    const hints = data?.state?._lastClientHints;
-    if (!hints) return;
-    if (hints.draw > 0) {
-      setDeckIndex(currentIndex => {
-        const drawn = fullDeck.slice(currentIndex, currentIndex + hints.draw);
-        setHand(prev => [...prev, ...drawn]);
-        return currentIndex + drawn.length;
-      });
+
+  // Send hand size updates to server when it changes
+  useEffect(() => {
+    if (matchStatus === 'PLAYING') {
+      sendAction('UPDATE_HAND_SIZE', { size: hand.length });
     }
-    if (hints.discard > 0) {
-      // No selection UI yet — auto-discards the oldest cards in hand.
-      setHand(prev => {
-        const toDiscard = prev.slice(0, hints.discard);
-        if (toDiscard.length > 0) {
-          setTurnLog(log => [`Discarded ${toDiscard.map((c: any) => c.name).join(', ')}.`, ...log]);
-        }
-        return prev.slice(hints.discard);
-      });
-    }
-    if (hints.returnedCardToHand) {
-      setHand(prev => [...prev, { ...hints.returnedCardToHand, id: `${hints.returnedCardToHand.id}_reclaimed_${Date.now()}` }]);
-    }
-  };
+  }, [hand.length, matchStatus]);
 
   const sendAction = async (action: string, payload: any = {}) => {
     const postRes = await fetch('/api/action', {
@@ -271,26 +307,29 @@ export default function GameEngine() {
     return data;
   };
 
+  const entityRequiresDeployTarget = (card: any) => {
+    return ['Sunspear Adept', 'Avalanche Herd', 'Skyrail Saboteur'].includes(card.name);
+  };
+
   const handleDragStart = (event: DragStartEvent) => {
-    if (!isPlayerTurn) return;
-    setActiveId(event.active.id as string);
+    const cardId = event.active.id as string;
+    const card = hand.find(c => c.id === cardId) || battlefield.find(c => c.id === cardId);
+    if (!isPlayerTurn && card?.card_type !== 'Flash') return;
+    setActiveId(cardId);
   }
 
   const handleDragEnd = async (event: DragEndEvent) => {
     setActiveId(null);
-    if (!isPlayerTurn) return;
     const { active, over } = event;
     if (!over) return;
 
     const card = hand.find(c => c.id === active.id) || battlefield.find(c => c.id === active.id);
     if (!card) return;
+    
+    if (!isPlayerTurn && card.card_type !== 'Flash') return;
 
     // Play from Hand
     if (hand.find(c => c.id === card.id)) {
-      if (isRelic(card)) {
-        setTurnLog(prev => [`Relics aren't supported yet — ${card.name} can't be played.`, ...prev]);
-        return;
-      }
       if (over.id === 'battlefield') {
         if (isSpell(card)) {
           if (spellRequiresEntityTarget(card)) {
@@ -305,8 +344,11 @@ export default function GameEngine() {
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
           const data = await sendAction('CAST_SPELL', { card, targetId: null, casterHandSize: handSizeAfterCast });
-          applySpellHints(data);
           return;
+        }
+        if (entityRequiresDeployTarget(card)) {
+           setTurnLog(prev => [`${card.name} requires a target. Drag it directly onto an entity or the enemy Vanguard.`, ...prev]);
+           return;
         }
         if (energy >= card.cost) {
           setHand(hand.filter(c => c.id !== card.id));
@@ -340,7 +382,16 @@ export default function GameEngine() {
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
           const data = await sendAction('CAST_SPELL', { card, targetId: over.id as string, casterHandSize: handSizeAfterCast });
-          applySpellHints(data);
+          return;
+        } else if (entityRequiresDeployTarget(card)) {
+          if (energy < card.cost) {
+            setTurnLog(prev => [`Not enough energy to play ${card.name}.`, ...prev]);
+            return;
+          }
+          setHand(hand.filter(c => c.id !== card.id));
+          setEnergy(e => e - card.cost);
+          await sendAction('PLAY_CARD', { zone: 'battlefield', card: { ...card, turnSummoned: turn }, targetId: over.id as string });
+          return;
         }
       }
     } 
@@ -366,6 +417,10 @@ export default function GameEngine() {
         await sendAction('ATTACK_VANGUARD', { power: card.power, attackerId: card.id });
       } else if (opponentBattlefield.find(c => c.id === over.id)) {
         const target = opponentBattlefield.find(c => c.id === over.id);
+        if (isRelic(target)) {
+          setTurnLog(prev => [`${target.name} is an Artifact and cannot be attacked.`, ...prev]);
+          return;
+        }
         if (target?.keywords?.stealth) {
           setTurnLog(prev => [`${target.name} has Stealth and can't be targeted.`, ...prev]);
           return;
@@ -394,6 +449,31 @@ export default function GameEngine() {
     }
   }
 
+  const handleMulligan = () => {
+    setMulliganCount(c => c + 1);
+    const newDeck = [...fullDeck].sort(() => Math.random() - 0.5);
+    setFullDeck(newDeck);
+    setHand(newDeck.slice(0, 5));
+    setDeckIndex(5);
+  };
+
+  const handleKeepHand = () => {
+    setHasKeptHand(true);
+    if (mulliganCount > 0) {
+      setHand(prev => {
+        const newHand = [...prev];
+        for (let i = 0; i < mulliganCount; i++) {
+          if (newHand.length > 0) {
+            const randomIndex = Math.floor(Math.random() * newHand.length);
+            newHand.splice(randomIndex, 1);
+          }
+        }
+        return newHand;
+      });
+    }
+    sendAction('READY_MULLIGAN');
+  };
+
   if (matchStatus === 'IDLE' || matchStatus === 'WAITING') {
     return (
       <div className="min-h-full bg-slate-950 flex flex-col items-center justify-center p-8">
@@ -420,6 +500,8 @@ export default function GameEngine() {
                 >
                   <option value="Nature's Wrath">Nature's Wrath (Starter)</option>
                   <option value="Cinder Ignition">Cinder Ignition (Starter)</option>
+                  <option value="Solar Singularity">Solar Singularity (Tournament)</option>
+                  <option value="Gaia's Loop">Gaia's Loop (Tournament)</option>
                   {userDecks.map(d => (
                     <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>
                   ))}
@@ -480,6 +562,33 @@ export default function GameEngine() {
 
   return (
     <DndContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+      {matchStatus === 'MULLIGAN' && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-8">
+          <div className="bg-slate-900 border border-cyan-500 rounded-2xl p-8 max-w-4xl w-full text-center">
+            <h2 className="text-4xl font-black text-cyan-400 mb-2">Mulligan Phase</h2>
+            {hasKeptHand ? (
+              <p className="text-slate-400 mb-8 text-lg">Waiting for opponent...</p>
+            ) : (
+              <>
+                <p className="text-slate-400 mb-8 text-lg">
+                  {mulliganCount > 0 ? `You have mulliganed ${mulliganCount} time(s). Keeping your hand will discard ${mulliganCount} random card(s).` : 'Review your opening hand. You may reshuffle and redraw.'}
+                </p>
+                <div className="flex justify-center gap-4 mb-8 scale-90">
+                  {hand.map(c => (
+                    <div key={c.id} className="w-32 h-48 flex-shrink-0">
+                      <CardTemplate card={c} minimal={true} />
+                    </div>
+                  ))}
+                </div>
+                <div className="flex gap-4 justify-center">
+                  <button onClick={handleMulligan} className="px-8 py-3 bg-slate-800 text-white rounded-lg hover:bg-slate-700 font-bold tracking-widest border border-slate-600">MULLIGAN</button>
+                  <button onClick={handleKeepHand} className="px-8 py-3 bg-cyan-600 text-white rounded-lg hover:bg-cyan-500 font-bold tracking-widest border border-cyan-400">KEEP HAND</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
       <div className={`min-h-full bg-[url('https://www.transparenttextures.com/patterns/black-scales.png')] bg-slate-950 flex flex-col justify-between p-4 lg:p-8 transition-colors duration-100`}>
         
         {/* Opponent Area (Top) */}
@@ -495,11 +604,20 @@ export default function GameEngine() {
                   <p className="text-sm text-slate-400 font-mono">{opponentHp} Nexus HP</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800">
-                <img src="/baked_cardback.png" className="w-6 h-8 rounded object-cover opacity-60 grayscale" />
-                <div className="text-left">
-                  <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Graveyard</p>
-                  <p className="text-sm text-slate-300 font-mono font-bold">{opponentGraveyard.length}</p>
+              <div className="flex gap-4 items-center">
+                <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800">
+                  <img src="/baked_cardback.png" className="w-6 h-8 rounded object-cover opacity-60 grayscale" />
+                  <div className="text-left">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Graveyard</p>
+                    <p className="text-sm text-slate-300 font-mono font-bold">{opponentGraveyard.length}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800">
+                  <img src="/baked_cardback.png" className="w-6 h-8 rounded object-cover" />
+                  <div className="text-left">
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Hand</p>
+                    <p className="text-sm text-slate-300 font-mono font-bold">{opponentHandSize}</p>
+                  </div>
                 </div>
               </div>
             </div>

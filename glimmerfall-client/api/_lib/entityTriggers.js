@@ -31,34 +31,105 @@ function makeToken({ name, power, health, owner, turn, keywords }) {
 }
 
 const DEPLOY_TRIGGERS = {
-  'Stonekin Elder': ({ state, owner, turn, logs }) => {
+  'Stonekin Elder': ({ state, owner, turn, logs, clientHints }) => {
     state.battlefield.push(makeToken({ name: 'Sapling Defender Token', power: 0, health: 4, owner, turn, keywords: { guard: true } }));
     logs.push(`Stonekin Elder creates a 0/4 Sapling Defender token with Guard.`);
+  },
+  'Citadel Seraph': ({ state, owner, logs }) => {
+    state.battlefield.forEach(c => {
+      if (c.owner === owner && c.name !== 'Citadel Seraph') {
+        if (!c.keywords) c.keywords = {};
+        c.keywords.guard = true;
+        c.temporaryGuard = true;
+      }
+    });
+    logs.push(`Citadel Seraph gives other allied Entities Guard.`);
+  },
+  'Rootbound Mystic': ({ state, owner, logs, clientHints }) => {
+    clientHints.putGlimmerNode = (clientHints.putGlimmerNode || 0) + 1;
+    logs.push(`Rootbound Mystic grows a Glimmer Node from your deck.`);
+  },
+  'Hollow Courtier': ({ state, logs, clientHints }) => {
+    clientHints.discard = (clientHints.discard || 0) + 1;
+    clientHints.opponentDiscard = (clientHints.opponentDiscard || 0) + 1;
+    logs.push(`Hollow Courtier forces both players to discard a card.`);
+  },
+  'Avalanche Herd': ({ state, owner, logs, targetId }) => {
+    const opponent = owner === 1 ? 2 : 1;
+    let target = state.battlefield.find(c => c.id === targetId && c.owner === opponent && c.card_type === 'Entity');
+    if (!target) {
+      // automated fallback if target was invalid or missing
+      const enemies = state.battlefield.filter(c => c.owner === opponent && c.card_type === 'Entity' && !c.exhausted);
+      if (enemies.length > 0) target = enemies[Math.floor(Math.random() * enemies.length)];
+    }
+    if (target) {
+      target.exhausted = true;
+      logs.push(`Avalanche Herd exhausts ${target.name}.`);
+    } else {
+      logs.push(`Avalanche Herd's deploy effect fizzles (no valid target).`);
+    }
+  },
+  'Sunspear Adept': ({ state, owner, logs, targetId }) => {
+    let damage = 1;
+    const targetEntity = state.battlefield.find(c => c.id === targetId);
+    
+    if (targetEntity) {
+      if (targetEntity.currentHealth < targetEntity.health) damage = 2; // "If it is damaged, deal 2 instead"
+      targetEntity.currentHealth -= damage;
+      logs.push(`Sunspear Adept deals ${damage} damage to ${targetEntity.name}.`);
+    } else {
+      const opponent = owner === 1 ? 2 : 1;
+      damageNexus(state, opponent, 1, logs);
+      logs.push(`Sunspear Adept deals 1 damage to the enemy Vanguard.`);
+    }
+  },
+  'Sepulcher Warden': ({ state, owner, logs, clientHints }) => {
+    const validTargets = state.graveyard.filter(c => c.owner === owner && c.card_type === 'Entity' && c.cost <= 2);
+    if (validTargets.length > 0) {
+      const targetIndex = Math.floor(Math.random() * validTargets.length);
+      const target = validTargets.splice(targetIndex, 1)[0];
+      clientHints.returnedCardToHand = target;
+      logs.push(`Sepulcher Warden returns ${target.name} from the Void to hand.`);
+    }
   },
 };
 
 const DESTROY_TRIGGERS = {
-  'Ashen Penitent': ({ state, owner, logs }) => {
+  'Ashen Penitent': ({ state, owner, logs, clientHints }) => {
     const opponent = owner === 1 ? 2 : 1;
     damageNexus(state, opponent, 2, logs);
     logs.push(`Ashen Penitent's destruction deals 2 damage to the enemy Nexus.`);
   },
-  'Voidling Swarm': ({ state, owner, turn, logs }) => {
+  'Voidling Swarm': ({ state, owner, turn, logs, clientHints }) => {
     state.battlefield.push(makeToken({ name: 'Voidling Token', power: 1, health: 1, owner, turn }));
     logs.push(`Voidling Swarm's destruction creates a 1/1 Voidling token.`);
+  },
+  'Static Anomaly': ({ state, owner, logs, clientHints }) => {
+    clientHints.draw = (clientHints.draw || 0) + 1;
+    logs.push(`Static Anomaly draws a card upon destruction.`);
+  },
+  'Mossback Forager': ({ state, owner, logs, clientHints }) => {
+    clientHints.putGlimmerNode = (clientHints.putGlimmerNode || 0) + 1;
+    logs.push(`Mossback Forager grows a Glimmer Node from your deck.`);
+  },
+  'Duskblade Fiend': ({ state, owner, logs, clientHints }) => {
+    clientHints.opponentDiscard = (clientHints.opponentDiscard || 0) + 1;
+    logs.push(`Duskblade Fiend forces the opponent to discard a card.`);
   },
 };
 
 export function resolveDeployTrigger({ state, entity, turn }) {
   const logs = [];
+  const clientHints = {};
   const trigger = DEPLOY_TRIGGERS[entity.name];
-  if (trigger) trigger({ state, owner: entity.owner, turn, logs });
-  return { logs };
+  if (trigger) trigger({ state, owner: entity.owner, turn, logs, clientHints });
+  return { logs, clientHints };
 }
 
 export function resolveDestroyTrigger({ state, entity, turn }) {
   const logs = [];
+  const clientHints = {};
   const trigger = DESTROY_TRIGGERS[entity.name];
-  if (trigger) trigger({ state, owner: entity.owner, turn, logs });
-  return { logs };
+  if (trigger) trigger({ state, owner: entity.owner, turn, logs, clientHints });
+  return { logs, clientHints };
 }

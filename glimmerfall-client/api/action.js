@@ -9,9 +9,23 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { matchId, player, action, payload } = req.body;
+
+  const mergeHints = (state, hints, sourcePlayer) => {
+    if (!hints || Object.keys(hints).length === 0) return;
+    state.pendingHints = state.pendingHints || [];
+    const hintObj = { id: `hint_${Date.now()}_${Math.random()}`, sourcePlayer };
+    
+    // We can distribute hints to players
+    if (hints.draw) hintObj.draw = hints.draw;
+    if (hints.discard) hintObj.discard = hints.discard;
+    if (hints.opponentDiscard) hintObj.opponentDiscard = hints.opponentDiscard;
+    if (hints.putGlimmerNode) hintObj.putGlimmerNode = hints.putGlimmerNode;
+    if (hints.returnedCardToHand) hintObj.returnedCardToHand = hints.returnedCardToHand;
+    
+    state.pendingHints.push(hintObj);
+  };
 
   const client = await pool.connect();
   try {
@@ -20,11 +34,12 @@ export default async function handler(req, res) {
     if (result.rows.length === 0) throw new Error('Match not found');
 
     const match = result.rows[0];
-    if (match.status !== 'PLAYING') throw new Error('Match is over');
+    if (match.status !== 'PLAYING' && match.status !== 'MULLIGAN') throw new Error('Match is over');
 
     let state = match.state;
     if (!state.graveyard) state.graveyard = [];
     if (!state.pendingReturns) state.pendingReturns = [];
+    if (!state.pendingHints) state.pendingHints = [];
     if (state.player1_shield === undefined) state.player1_shield = 0;
     if (state.player2_shield === undefined) state.player2_shield = 0;
     
@@ -38,10 +53,16 @@ export default async function handler(req, res) {
       match.current_turn += 1;
       state.log.unshift(`Turn ${match.current_turn} begins.`);
       
-      // Clear exhaustion for the NEW active player's entities
+      // Clear exhaustion and temporary guard for the NEW active player's entities
       const activePlayerNum = match.active_player === match.player1 ? 1 : 2;
       state.battlefield.forEach(c => {
-         if (c.owner === activePlayerNum) c.exhausted = false;
+         if (c.owner === activePlayerNum) {
+           c.exhausted = false;
+           if (c.temporaryGuard) {
+             c.temporaryGuard = false;
+             if (c.keywords) c.keywords.guard = false;
+           }
+         }
       });
     } else if (action === 'PLAY_CARD') {
       // payload = { zone: 'battlefield' or 'resonanceRow', card: {} }
@@ -55,8 +76,9 @@ export default async function handler(req, res) {
         };
         state.battlefield.push(entity);
         state.log.unshift(`Player ${player} summoned ${payload.card.name}.`);
-        const { logs: deployLogs } = resolveDeployTrigger({ state, entity, turn: match.current_turn });
+        const { logs: deployLogs, clientHints } = resolveDeployTrigger({ state, entity, turn: match.current_turn, targetId: payload.targetId });
         deployLogs.forEach(l => state.log.unshift(l));
+        mergeHints(state, clientHints, player);
       } else {
         state.resonanceRow.push({ ...payload.card, owner: player });
         state.log.unshift(`Player ${player} placed a node.`);
@@ -89,6 +111,9 @@ export default async function handler(req, res) {
       const targetIndex = state.battlefield.findIndex(c => c.id === payload.targetId);
       if (targetIndex !== -1) {
         const target = state.battlefield[targetIndex];
+        if (target.card_type === 'Relic' || target.card_type === 'Artifact') {
+          throw new Error(`${target.name} is an Artifact and cannot be attacked.`);
+        }
         if (target.keywords?.stealth) {
           throw new Error(`${target.name} has Stealth and can't be targeted.`);
         }
@@ -115,8 +140,9 @@ export default async function handler(req, res) {
           const attackerIndex = state.battlefield.findIndex(c => c.id === payload.attackerId);
           if (attackerIndex !== -1) state.battlefield.splice(attackerIndex, 1);
           state.graveyard.push(attacker);
-          const { logs: destroyLogs } = resolveDestroyTrigger({ state, entity: attacker, turn: match.current_turn });
+          const { logs: destroyLogs, clientHints } = resolveDestroyTrigger({ state, entity: attacker, turn: match.current_turn });
           destroyLogs.forEach(l => state.log.unshift(l));
+          mergeHints(state, clientHints, player);
         }
 
         // Handle target death
@@ -125,8 +151,9 @@ export default async function handler(req, res) {
           const newTargetIndex = state.battlefield.findIndex(c => c.id === payload.targetId);
           if (newTargetIndex !== -1) state.battlefield.splice(newTargetIndex, 1);
           state.graveyard.push(target);
-          const { logs: destroyLogs } = resolveDestroyTrigger({ state, entity: target, turn: match.current_turn });
+          const { logs: destroyLogs, clientHints } = resolveDestroyTrigger({ state, entity: target, turn: match.current_turn });
           destroyLogs.forEach(l => state.log.unshift(l));
+          mergeHints(state, clientHints, player);
           if (attacker?.keywords?.overwhelm && damage > healthBefore) {
             const excess = damage - healthBefore;
             const spillLogs = [];
@@ -146,19 +173,35 @@ export default async function handler(req, res) {
       state.graveyard.push({ id: card.id, name: card.name, card_type: card.card_type, owner: player });
       logs.forEach(l => state.log.unshift(l));
       (destroyed || []).forEach(entity => {
-        const { logs: destroyLogs } = resolveDestroyTrigger({ state, entity, turn: match.current_turn });
+        const { logs: destroyLogs, clientHints: destroyHints } = resolveDestroyTrigger({ state, entity, turn: match.current_turn });
         destroyLogs.forEach(l => state.log.unshift(l));
+        mergeHints(state, destroyHints, player);
       });
       if (matchOver) {
         match.status = matchOver;
         state.log.unshift(`MATCH OVER! ${match.status}!`);
       }
-      state._lastClientHints = clientHints;
+      mergeHints(state, clientHints, player);
+    } else if (action === 'CLAIM_HINT') {
+      if (state.pendingHints) {
+        state.pendingHints = state.pendingHints.filter(h => h.id !== payload.hintId);
+      }
     } else if (action === 'CLAIM_RETURN') {
       // Client has added a pending returned-to-hand card locally; remove it from state.
       if (state.pendingReturns) {
         state.pendingReturns = state.pendingReturns.filter(r => r.returnId !== payload.returnId);
       }
+    } else if (action === 'READY_MULLIGAN') {
+      if (player === 1) state.player1_ready = true;
+      else state.player2_ready = true;
+      
+      if (state.player1_ready && state.player2_ready) {
+        match.status = 'PLAYING';
+        state.log.unshift('Both players are ready. Match begins!');
+      }
+    } else if (action === 'UPDATE_HAND_SIZE') {
+      if (player === 1) state.player1_hand = payload.size;
+      else state.player2_hand = payload.size;
     } else if (action === 'SURRENDER') {
       match.status = player === 1 ? 'PLAYER 2 WINS' : 'PLAYER 1 WINS';
       state.log.unshift(`Player ${player} surrendered!`);

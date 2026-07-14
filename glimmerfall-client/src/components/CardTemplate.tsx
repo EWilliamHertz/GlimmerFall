@@ -165,9 +165,8 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
           </span>
         </div>
 
-        {/* Only render Power/Health if they exist and are not null */}
         {(card.power != null && card.health != null) && (
-          <div className={`absolute ${minimal ? '-bottom-1.5 -right-1 px-2 py-0.5 border' : '-bottom-3 -right-2 px-3 py-1 border-2'} bg-slate-900 border-slate-600 rounded-tl-xl rounded-br-lg shadow-[0_0_15px_rgba(0,0,0,0.8)] print:shadow-none`}>
+          <div className={`absolute ${minimal ? '-bottom-1.5 -right-1 px-2 py-0.5 border' : '-bottom-3 -right-2 px-3 py-1 border-2'} bg-slate-900 border-slate-600 rounded-xl shadow-[0_0_15px_rgba(0,0,0,0.8)] print:shadow-none`}>
             <span className={`font-black text-white ${minimal ? 'text-[10px]' : 'text-sm'}`}>{card.power} / {card.health}</span>
           </div>
         )}

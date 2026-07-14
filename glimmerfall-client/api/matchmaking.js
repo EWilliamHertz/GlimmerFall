@@ -24,10 +24,11 @@ export default async function handler(req, res) {
           const initialState = {
             player1_hp: 20, player2_hp: 20,
             player1_hand: 5, player2_hand: 5,
-            battlefield: [], resonanceRow: [], graveyard: [], pendingReturns: [], player1_shield: 0, player2_shield: 0,
-            log: ['Match started!']
+            player1_ready: false, player2_ready: false,
+            battlefield: [], resonanceRow: [], graveyard: [], pendingReturns: [], pendingHints: [], player1_shield: 0, player2_shield: 0,
+            log: ['Mulligan Phase...']
           };
-          await client.query("UPDATE matches SET player2 = $1, status = 'PLAYING', state = $2 WHERE id = $3", [username, initialState, match.id]);
+          await client.query("UPDATE matches SET player2 = $1, status = 'MULLIGAN', state = $2 WHERE id = $3", [username, initialState, match.id]);
           await client.query('COMMIT');
           return res.status(200).json({ matchId: match.id, player: 2 });
         } else {
@@ -48,10 +49,11 @@ export default async function handler(req, res) {
         const initialState = {
           player1_hp: 20, player2_hp: 20,
           player1_hand: 5, player2_hand: 5,
-          battlefield: [], resonanceRow: [], graveyard: [], pendingReturns: [], player1_shield: 0, player2_shield: 0,
-          log: ['Match started!']
+          player1_ready: false, player2_ready: false,
+          battlefield: [], resonanceRow: [], graveyard: [], pendingReturns: [], pendingHints: [], player1_shield: 0, player2_shield: 0,
+          log: ['Mulligan Phase...']
         };
-        await client.query("UPDATE matches SET player2 = $1, status = 'PLAYING', state = $2 WHERE id = $3", [username, initialState, matchId]);
+        await client.query("UPDATE matches SET player2 = $1, status = 'MULLIGAN', state = $2 WHERE id = $3", [username, initialState, matchId]);
         await client.query('COMMIT');
         return res.status(200).json({ matchId, player: 2 });
       } else {
