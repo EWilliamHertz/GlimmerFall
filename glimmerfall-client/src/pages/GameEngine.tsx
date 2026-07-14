@@ -19,10 +19,8 @@ function EntityDropZone({ id, children }: { id: string, children: React.ReactNod
   );
 }
 
-// card_type is actually "Spell — Fast" / "Spell — Slow" (with an em dash),
-// never the bare string "Spell" — match on prefix, not exact equality.
-const isSpell = (card: any) => !!card.card_type?.startsWith('Spell');
-const isRelic = (card: any) => card.card_type === 'Relic';
+const isSpell = (card: any) => card.card_type === 'Rite' || card.card_type === 'Flash';
+const isRelic = (card: any) => card.card_type === 'Relic' || card.card_type === 'Artifact';
 
 // A spell "requires a target" if its text talks about an entity/creature —
 // otherwise it can be cast by dropping it on your own battlefield with no target.
@@ -487,7 +485,7 @@ export default function GameEngine() {
         {/* Opponent Area (Top) */}
         <div className="flex flex-col gap-4">
           <DropZone id="opponent_vanguard" title="">
-            <div className={`flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border ${activeId && (hand.find(c=>c.id===activeId)?.card_type==='Spell' || battlefield.find(c=>c.id===activeId)) ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]' : 'border-red-900/30'} shadow-[0_0_30px_rgba(220,38,38,0.05)] transition-all w-full`}>
+            <div className={`flex justify-between items-center bg-slate-900/50 p-4 rounded-xl border ${activeId && (isSpell(hand.find(c=>c.id===activeId)) || battlefield.find(c=>c.id===activeId)) ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.4)]' : 'border-red-900/30'} shadow-[0_0_30px_rgba(220,38,38,0.05)] transition-all w-full`}>
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-red-950 border border-red-800 rounded-lg flex items-center justify-center text-red-500 shadow-[0_0_15px_rgba(220,38,38,0.2)]">
                   <ShieldAlert className="w-7 h-7" />

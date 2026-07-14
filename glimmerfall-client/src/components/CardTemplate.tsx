@@ -107,7 +107,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
       {/* Background Full Art Image */}
       <div className="absolute inset-0 z-0">
         <img 
-          src={`https://res.cloudinary.com/dfyh7cs1g/image/upload/v3/glimmerfall/card_renders/${card.name.toLowerCase().replace(/[,']/g, '').replace(/ /g, '_')}.png`} 
+          src={`https://res.cloudinary.com/dfyh7cs1g/image/upload/v8/glimmerfall/card_renders/${card.name.toLowerCase().replace(/[,']/g, '').replace(/ /g, '_')}.png`}
           alt={card.name} 
           className="w-full h-full object-cover object-center"
           onError={(e) => {
@@ -120,8 +120,8 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
 
       {/* Card Header (Cost & Name) */}
       <div className={`absolute top-0 left-0 right-0 ${minimal ? 'p-1.5' : 'p-3'} flex justify-between items-start z-10 pointer-events-none gap-1`}>
-        <div className={`bg-black/60 backdrop-blur-md ${minimal ? 'px-1.5 py-0.5' : 'px-3 py-1'} rounded-br-lg rounded-tl-sm border-b border-r border-white/20 shadow-lg max-w-[75%]`}>
-          <h3 className={`font-black text-white tracking-wide truncate ${minimal ? 'text-[9px]' : 'text-sm'}`} title={card.name}>{card.name}</h3>
+        <div className={`bg-black/60 backdrop-blur-md ${minimal ? 'px-1.5 py-0.5' : 'px-3 py-1'} rounded-br-lg rounded-tl-sm border-b border-r border-white/20 shadow-lg print:shadow-none max-w-[85%]`}>
+          <h3 className={`font-black text-white tracking-wide leading-tight break-words ${minimal ? 'text-[9px]' : 'text-sm'}`} title={card.name}>{card.name}</h3>
         </div>
         <div className={`${minimal ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-base'} shrink-0 rounded-full bg-cyan-900/80 backdrop-blur-md border border-cyan-400 flex items-center justify-center shadow-[0_0_10px_rgba(6,182,212,0.5)]`}>
           <span className="font-black text-white">{card.cost}</span>
@@ -129,7 +129,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
       </div>
 
       {/* Card Footer (Type, Description, Stats) */}
-      <div className={`relative z-10 ${minimal ? 'p-1.5 mx-1 mb-2' : 'p-3 mx-2 mb-4'} bg-slate-950/70 backdrop-blur-xl border border-slate-400/30 rounded-lg flex flex-col pointer-events-none shadow-inner`}>
+      <div className={`relative z-10 ${minimal ? 'p-1.5 mx-1 mb-2' : 'p-3 mx-2 mb-4'} bg-slate-950/70 backdrop-blur-xl border border-slate-400/30 rounded-lg flex flex-col pointer-events-none shadow-inner print:shadow-none`}>
         <div className={`flex justify-between items-center mb-1 ${minimal ? 'pb-0.5' : 'pb-1'} border-b border-slate-400/20`}>
           <span className={`${minimal ? 'text-[8px]' : 'text-[10px]'} font-bold text-cyan-100 uppercase tracking-widest drop-shadow-md`}>{card.card_type}</span>
           <RarityIcon />
@@ -139,9 +139,20 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
           {card.power != null && card.health != null && (
              <div style={{ float: 'right', width: minimal ? '35px' : '65px', height: minimal ? '20px' : '40px', shapeOutside: 'inset(0)' }}></div>
           )}
-          <p className={`${minimal ? 'text-[8px] leading-tight line-clamp-4' : 'text-xs leading-snug line-clamp-[6]'} text-slate-200 italic drop-shadow-md ${card.description && card.description.length < 50 ? 'text-center font-bold text-[10px] sm:text-sm mt-2' : ''}`}>
-            {card.description}
-          </p>
+          <div className={`${minimal ? 'text-[8px] leading-tight' : (card.description && card.description.length > 100 ? 'text-[10px] leading-tight' : 'text-xs leading-snug')} text-slate-200 italic drop-shadow-md`}>
+            {card.description ? (
+              card.description.includes(' — ') ? (
+                <>
+                  <span className={`font-bold not-italic block ${minimal ? 'mb-0.5' : 'mb-1'} text-cyan-200`}>
+                    {card.description.split(' — ')[0]}
+                  </span>
+                  <span>{card.description.split(' — ').slice(1).join(' — ')}</span>
+                </>
+              ) : (
+                card.description
+              )
+            ) : null}
+          </div>
         </div>
 
         {/* Collector Info */}
@@ -156,7 +167,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
 
         {/* Only render Power/Health if they exist and are not null */}
         {(card.power != null && card.health != null) && (
-          <div className={`absolute ${minimal ? '-bottom-1.5 -right-1 px-2 py-0.5 border' : '-bottom-3 -right-2 px-3 py-1 border-2'} bg-slate-900 border-slate-600 rounded-tl-xl rounded-br-lg shadow-[0_0_15px_rgba(0,0,0,0.8)]`}>
+          <div className={`absolute ${minimal ? '-bottom-1.5 -right-1 px-2 py-0.5 border' : '-bottom-3 -right-2 px-3 py-1 border-2'} bg-slate-900 border-slate-600 rounded-tl-xl rounded-br-lg shadow-[0_0_15px_rgba(0,0,0,0.8)] print:shadow-none`}>
             <span className={`font-black text-white ${minimal ? 'text-[10px]' : 'text-sm'}`}>{card.power} / {card.health}</span>
           </div>
         )}
