@@ -343,7 +343,7 @@ export default function GameEngine() {
           const handSizeAfterCast = hand.length - 1;
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
-          const data = await sendAction('CAST_SPELL', { card, targetId: null, casterHandSize: handSizeAfterCast });
+          await sendAction('CAST_SPELL', { card, targetId: null, casterHandSize: handSizeAfterCast });
           return;
         }
         if (entityRequiresDeployTarget(card)) {
@@ -381,7 +381,7 @@ export default function GameEngine() {
           const handSizeAfterCast = hand.length - 1;
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
-          const data = await sendAction('CAST_SPELL', { card, targetId: over.id as string, casterHandSize: handSizeAfterCast });
+          await sendAction('CAST_SPELL', { card, targetId: over.id as string, casterHandSize: handSizeAfterCast });
           return;
         } else if (entityRequiresDeployTarget(card)) {
           if (energy < card.cost) {
