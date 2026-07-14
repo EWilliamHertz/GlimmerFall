@@ -4,7 +4,6 @@ import { CardTemplate } from '../components/CardTemplate';
 const CARDS_PER_PAGE = 9;
 const CARD_W = '60mm';
 const CARD_H = '83.8mm';
-const CARD_SCALE = 0.965;
 
 export const PrintDecks = () => {
   const [cards, setCards] = useState<any[]>([]);
@@ -31,21 +30,18 @@ export const PrintDecks = () => {
   }, [selectedDeck, cards, userDecks, starterDecks]);
 
   const handlePrint = async () => {
-    // Browsers can open the print dialog before remote Cloudinary images finish decoding.
-    // Wait for every card image so the PDF receives the artwork, not an empty frame.
     const images = Array.from(document.querySelectorAll<HTMLImageElement>('.print-content img'));
     await Promise.all(images.map(async (img) => {
       if (!img.complete) await new Promise<void>(resolve => {
         img.addEventListener('load', () => resolve(), { once: true });
         img.addEventListener('error', () => resolve(), { once: true });
       });
-      try { if (img.decode) await img.decode(); } catch (_) { /* failed art keeps its fallback */ }
+      try { if (img.decode) await img.decode(); } catch (_) { /* fallback remains visible */ }
     }));
     await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     window.print();
   };
 
-  // Always render complete 3x3 sheets. The final sheet gets empty slots, never a partial/reflowed row.
   const pages: any[][] = [];
   for (let i = 0; i < decklist.length; i += CARDS_PER_PAGE) {
     const page = decklist.slice(i, i + CARDS_PER_PAGE);
@@ -57,7 +53,7 @@ export const PrintDecks = () => {
     <style>{`@media print {
       nav, footer, header, .no-print { display:none !important; }
       body, html, #root { background:#fff !important; margin:0 !important; padding:0 !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
-      .md\:flex { display:block !important; }
+      .md\\:flex { display:block !important; }
       .print-sheet { page-break-after:always; break-after:page; margin:0 !important; }
       .print-card-wrap { width:60mm !important; height:83.8mm !important; overflow:hidden !important; position:relative; }
       .print-card-wrap > * { width:60mm !important; height:83.8mm !important; max-width:60mm !important; max-height:83.8mm !important; transform:scale(.965); transform-origin:top left; }
