@@ -4,6 +4,7 @@ import { CardTemplate } from '../components/CardTemplate';
 const CARDS_PER_PAGE = 9;
 const CARD_W = '60mm';
 const CARD_H = '83.8mm';
+const CARD_SCALE = 0.965;
 
 export const PrintDecks = () => {
   const [cards, setCards] = useState<any[]>([]);
@@ -43,6 +44,8 @@ export const PrintDecks = () => {
       body, html, #root { background:#fff !important; margin:0 !important; padding:0 !important; }
       .md\:flex { display:block !important; }
       .print-sheet { page-break-after:always; break-after:page; margin:0 !important; }
+      .print-card-wrap { width:60mm !important; height:83.8mm !important; overflow:hidden !important; position:relative; }
+      .print-card-wrap > * { width:60mm !important; height:83.8mm !important; max-width:60mm !important; max-height:83.8mm !important; transform:scale(.965); transform-origin:top left; }
       @page { size:A4 portrait; margin:10mm; }
     }`}</style>
     <div className="no-print p-8 bg-slate-900 text-white mb-8 shadow-md">
@@ -52,7 +55,7 @@ export const PrintDecks = () => {
     </div>
     <div className="print-content" style={{background:'#fff'}}>
       {pages.map((page, pageIndex) => <div key={pageIndex} className="print-sheet" style={{width:'180mm', height:'251.4mm', margin:'10mm auto', background:'#fff', display:'grid', gridTemplateColumns:`repeat(3, ${CARD_W})`, gridTemplateRows:`repeat(3, ${CARD_H})`, overflow:'hidden'}}>
-        {page.map((card, i) => <div key={i} style={{width:CARD_W, height:CARD_H, overflow:'hidden', boxSizing:'border-box'}}>{card && <CardTemplate card={card} minimal={false} />}</div>)}
+        {page.map((card, i) => <div key={i} className="print-card-wrap" style={{width:CARD_W, height:CARD_H, overflow:'hidden', boxSizing:'border-box'}}>{card && <CardTemplate card={card} minimal={false} />}</div>)}
       </div>)}
     </div>
     {decklist.length === 0 && selectedDeck && <div className="text-center p-8 text-slate-500">Loading cards...</div>}
