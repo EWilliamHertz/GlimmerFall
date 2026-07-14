@@ -291,20 +291,26 @@ export default function GameEngine() {
   }, [hand.length, matchStatus]);
 
   const sendAction = async (action: string, payload: any = {}) => {
-    const postRes = await fetch('/api/action', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ matchId, player: playerNum, action, payload })
-    });
-    const postData = await postRes.json();
-    if (postData.error) {
-      setTurnLog(prev => [postData.error, ...prev]);
+    try {
+      const postRes = await fetch('/api/action', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ matchId, player: playerNum, action, payload })
+      });
+      if (!postRes.ok) throw new Error(`Server returned ${postRes.status}`);
+      const postData = await postRes.json();
+      if (postData.error) {
+        setTurnLog(prev => [postData.error, ...prev]);
+      }
+      // Optimistically fetch state immediately
+      const res = await fetch(`/api/match?id=${matchId}`);
+      const data = await res.json();
+      syncStateFromServer(data);
+      return data;
+    } catch (err: any) {
+      console.error(err);
+      setTurnLog(prev => [`Network error: action failed (${err.message}). If stuck, try refreshing.`, ...prev]);
     }
-    // Optimistically fetch state immediately
-    const res = await fetch(`/api/match?id=${matchId}`);
-    const data = await res.json();
-    syncStateFromServer(data);
-    return data;
   };
 
   const entityRequiresDeployTarget = (card: any) => {
