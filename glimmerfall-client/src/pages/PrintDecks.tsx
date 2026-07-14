@@ -30,6 +30,21 @@ export const PrintDecks = () => {
     setDecklist(flat);
   }, [selectedDeck, cards, userDecks, starterDecks]);
 
+  const handlePrint = async () => {
+    // Browsers can open the print dialog before remote Cloudinary images finish decoding.
+    // Wait for every card image so the PDF receives the artwork, not an empty frame.
+    const images = Array.from(document.querySelectorAll<HTMLImageElement>('.print-content img'));
+    await Promise.all(images.map(async (img) => {
+      if (!img.complete) await new Promise<void>(resolve => {
+        img.addEventListener('load', () => resolve(), { once: true });
+        img.addEventListener('error', () => resolve(), { once: true });
+      });
+      try { if (img.decode) await img.decode(); } catch (_) { /* failed art keeps its fallback */ }
+    }));
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    window.print();
+  };
+
   // Always render complete 3x3 sheets. The final sheet gets empty slots, never a partial/reflowed row.
   const pages: any[][] = [];
   for (let i = 0; i < decklist.length; i += CARDS_PER_PAGE) {
@@ -41,7 +56,7 @@ export const PrintDecks = () => {
   return <div className="min-h-screen bg-slate-200 print-container">
     <style>{`@media print {
       nav, footer, header, .no-print { display:none !important; }
-      body, html, #root { background:#fff !important; margin:0 !important; padding:0 !important; }
+      body, html, #root { background:#fff !important; margin:0 !important; padding:0 !important; -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
       .md\:flex { display:block !important; }
       .print-sheet { page-break-after:always; break-after:page; margin:0 !important; }
       .print-card-wrap { width:60mm !important; height:83.8mm !important; overflow:hidden !important; position:relative; }
@@ -51,7 +66,7 @@ export const PrintDecks = () => {
     <div className="no-print p-8 bg-slate-900 text-white mb-8 shadow-md">
       <h1 className="text-3xl font-black text-cyan-400 mb-4">Print Deck to PDF</h1>
       <p className="mb-4 text-slate-300">Every A4 sheet contains exactly nine fixed card positions (3 × 3). The final sheet uses blank positions so cards never shift or create uneven pages.</p>
-      <div className="flex gap-4"><select className="p-3 rounded bg-slate-800 border border-slate-700 text-white font-bold w-full max-w-md" value={selectedDeck} onChange={e => setSelectedDeck(e.target.value)}><option value="">-- Select a Deck --</option><optgroup label="Your Decks">{userDecks.map(d => <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>)}</optgroup><optgroup label="Starter & Tournament Decks">{starterDecks.map(d => <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>)}</optgroup></select><button onClick={() => window.print()} className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded font-bold">Print Now</button></div>
+      <div className="flex gap-4"><select className="p-3 rounded bg-slate-800 border border-slate-700 text-white font-bold w-full max-w-md" value={selectedDeck} onChange={e => setSelectedDeck(e.target.value)}><option value="">-- Select a Deck --</option><optgroup label="Your Decks">{userDecks.map(d => <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>)}</optgroup><optgroup label="Starter & Tournament Decks">{starterDecks.map(d => <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>)}</optgroup></select><button onClick={handlePrint} className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded font-bold">Print Now</button></div>
     </div>
     <div className="print-content" style={{background:'#fff'}}>
       {pages.map((page, pageIndex) => <div key={pageIndex} className="print-sheet" style={{width:'180mm', height:'251.4mm', margin:'10mm auto', background:'#fff', display:'grid', gridTemplateColumns:`repeat(3, ${CARD_W})`, gridTemplateRows:`repeat(3, ${CARD_H})`, overflow:'hidden'}}>
