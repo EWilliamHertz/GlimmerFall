@@ -13,6 +13,7 @@ import { CardTemplate } from './components/CardTemplate';
 import GameEngine from './pages/GameEngine';
 import TutorialEngine from './pages/TutorialEngine';
 import { PrintDecks } from './pages/PrintDecks';
+import { AdminDashboard } from './pages/AdminDashboard';
 
 function App() {
   const location = useLocation();
@@ -71,6 +72,7 @@ function App() {
     { id: '/booster', label: 'Boosters', icon: <ShieldAlert className="w-5 h-5 shrink-0" /> },
     { id: '/decks', label: 'Deck Builder', icon: <LibraryBig className="w-5 h-5 text-purple-400 shrink-0" /> },
     { id: '/play', label: 'Play (Alpha)', icon: <Layers className="w-5 h-5 text-cyan-400 shrink-0" /> },
+    { id: '/admin', label: 'Admin Hub', icon: <Database className="w-5 h-5 text-red-400 shrink-0" /> },
     ...(currentUser ? [] : [{ id: '/auth', label: 'Login', icon: <LogIn className="w-5 h-5 shrink-0" /> }]),
   ];
 
@@ -159,6 +161,7 @@ function App() {
             <Route path="/play" element={<GameEngine />} />
             <Route path="/tutorial" element={<TutorialEngine />} />
             <Route path="/resources" element={<DeveloperResources />} />
+            <Route path="/admin" element={<AdminDashboard />} />
           </Routes>
         </div>
 
