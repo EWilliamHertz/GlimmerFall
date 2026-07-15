@@ -1,0 +1,539 @@
+[
+  {
+    "id": "kevin_li",
+    "name": "ZY Toys",
+    "rep": "Kevin Li",
+    "avatar": "https://ui-avatars.com/api/?name=Kevin+Li&background=random",
+    "tagline": "Confirmed quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "$300 USD DDP",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "$300 USD DDP"
+      },
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  },
+  {
+    "id": "prinero",
+    "name": "Prinero.se",
+    "rep": "Prinero",
+    "avatar": "https://ui-avatars.com/api/?name=Prinero&background=random",
+    "tagline": "Earlier quote; confirm delivery",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "1,650 SEK + VAT + shipping",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "1,650 SEK + VAT + shipping"
+      }
+    ]
+  },
+  {
+    "id": "luke_liu",
+    "name": "LongPrinting",
+    "rep": "Luke Liu",
+    "avatar": "https://ui-avatars.com/api/?name=Luke+Liu&background=random",
+    "tagline": "Awaiting quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "nan",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  },
+  {
+    "id": "rosen_luo",
+    "name": "CSPoker",
+    "rep": "Rosen Luo",
+    "avatar": "https://ui-avatars.com/api/?name=Rosen+Luo&background=random",
+    "tagline": "Awaiting quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "nan",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  },
+  {
+    "id": "bella_ni",
+    "name": "CNKK",
+    "rep": "Bella Ni",
+    "avatar": "https://ui-avatars.com/api/?name=Bella+Ni&background=random",
+    "tagline": "Awaiting quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "nan",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  },
+  {
+    "id": "ada_yang",
+    "name": "YouMeike",
+    "rep": "Ada Yang",
+    "avatar": "https://ui-avatars.com/api/?name=Ada+Yang&background=random",
+    "tagline": "Awaiting quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "nan",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  },
+  {
+    "id": "charlene_yi",
+    "name": "YHDCard",
+    "rep": "Charlene Yi",
+    "avatar": "https://ui-avatars.com/api/?name=Charlene+Yi&background=random",
+    "tagline": "Awaiting quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "nan",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  },
+  {
+    "id": "nancy_hong",
+    "name": "GamakGame\u2014 https://gamakgame.en.alibaba.com/",
+    "rep": "Nancy Hong",
+    "avatar": "https://ui-avatars.com/api/?name=Nancy+Hong&background=random",
+    "tagline": "Awaiting quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "nan",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  },
+  {
+    "id": "aaron_qian",
+    "name": "LianyiPackaging",
+    "rep": "Aaron Qian",
+    "avatar": "https://ui-avatars.com/api/?name=Aaron+Qian&background=random",
+    "tagline": "Awaiting quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "nan",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  },
+  {
+    "id": "amy_li",
+    "name": "Bayaya - https://bayaya.en.alibaba.com/",
+    "rep": "Amy Li",
+    "avatar": "https://ui-avatars.com/api/?name=Amy+Li&background=random",
+    "tagline": "Awaiting quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "nan",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  },
+  {
+    "id": "elin_yang",
+    "name": "Jumbayitc",
+    "rep": "Elin Yang",
+    "avatar": "https://ui-avatars.com/api/?name=Elin+Yang&background=random",
+    "tagline": "Awaiting quote",
+    "specs": {
+      "dimensions": "63 \u00d7 88 mm",
+      "stock": "300 gsm white-core card stock",
+      "finish": "Matte varnish or lamination",
+      "holographic": "1 replacement card / pack",
+      "sample_size": "1 to 50 boxes",
+      "min_bulk": "500 boxes",
+      "fees": "nan",
+      "lead_time": "To be confirmed"
+    },
+    "quotes": [
+      {
+        "quantity": "1 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 \u00d7 4 decks",
+        "price": "nan"
+      },
+      {
+        "quantity": "3 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "5 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "10 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "20 booster boxes",
+        "price": "nan"
+      },
+      {
+        "quantity": "50 booster boxes",
+        "price": "nan"
+      }
+    ]
+  }
+]

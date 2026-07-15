@@ -1,14 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// --- DUMMY DATA --- //
-const PRODUCERS = [
-  { id: 'p1', name: 'Zhongshan Printworks', rep: 'Li Wei', avatar: 'https://i.pravatar.cc/150?u=p1', tagline: 'High-Volume Precision Printing', specs: { dimensions: '63 × 88 mm', stock: '300 gsm white-core', finish: 'Double-sided matte lamination', holographic: '1:5 replacement ratio', sample_size: '5 to 20 boxes', min_bulk: '500 boxes', fees: '$150 setup', lead_time: '14-21 days' } },
-  { id: 'p2', name: 'NeoCard Manufacturing', rep: 'Sarah Jenkins', avatar: 'https://i.pravatar.cc/150?u=p2', tagline: 'Premium Matte & Foil Specialists', specs: { dimensions: '63 × 88 mm', stock: '320 gsm black-core', finish: 'Matte varnish', holographic: '1:3 replacement ratio', sample_size: '10 boxes min', min_bulk: '250 boxes', fees: '$200 setup + proofing', lead_time: '21-28 days' } },
-  { id: 'p3', name: 'AetherGraphics B2B', rep: 'Marcus Thall', avatar: 'https://i.pravatar.cc/150?u=p3', tagline: 'Fast Turnaround TCG Partners', specs: { dimensions: '63 × 88 mm', stock: '300 gsm white-core', finish: 'Gloss or Matte varnish', holographic: '1:10 replacement ratio', sample_size: 'No samples', min_bulk: '100 boxes', fees: '$0 setup', lead_time: '7-10 days' } },
-  { id: 'p4', name: 'Global TCG Solutions', rep: 'Yuki Tanaka', avatar: 'https://i.pravatar.cc/150?u=p4', tagline: 'Complete Assembly & Packaging', specs: { dimensions: '63 × 88 mm', stock: '300 gsm white-core', finish: 'Matte lamination', holographic: '1:1 replacement ratio (all foil)', sample_size: '20 boxes', min_bulk: '500 boxes', fees: '$300 proofing', lead_time: '30 days' } },
-  { id: 'p5', name: 'Nordic Cardcrafters', rep: 'Lars Svensson', avatar: 'https://i.pravatar.cc/150?u=p5', tagline: 'Local European Production', specs: { dimensions: '63 × 88 mm', stock: '330 gsm blue-core', finish: 'Matte varnish', holographic: '1:5 replacement ratio', sample_size: '5 boxes', min_bulk: '50 boxes', fees: '€100 setup', lead_time: '14 days' } }
-];
+import producersData from '../data/producers.json';
+
+// --- DATA --- //
+const PRODUCERS = producersData;
 
 const PLAYERS = [
   { id: 1, name: 'AlexTheGreat', archetype: 'Solar Aggro', winRate: '58%', feedback: 4 },
