@@ -92,6 +92,10 @@ const DEPLOY_TRIGGERS = {
       logs.push(`Sepulcher Warden returns ${target.name} from the Void to hand.`);
     }
   },
+  'Firstlight Scout': ({ state, owner, logs, clientHints }) => {
+    clientHints.scry = 1;
+    logs.push(`Firstlight Scout allows you to peek at the top card of your deck.`);
+  },
 };
 
 const DESTROY_TRIGGERS = {

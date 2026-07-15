@@ -79,6 +79,7 @@ export default function GameEngine() {
 
   const [mulliganCount, setMulliganCount] = useState(0);
   const [hasKeptHand, setHasKeptHand] = useState(false);
+  const [scryingCard, setScryingCard] = useState<any>(null);
 
   const isPlayerTurn = matchStatus === 'PLAYING' && activePlayer === username;
 
@@ -219,6 +220,13 @@ export default function GameEngine() {
         }
         if (h.sourcePlayer === playerNum && h.returnedCardToHand) {
           setHand(prev => [...prev, { ...h.returnedCardToHand, id: `${h.returnedCardToHand.id}_reclaimed_${Date.now()}` }]);
+        }
+        if (h.sourcePlayer === playerNum && h.scry > 0) {
+          setDeckIndex(currentIndex => {
+            const topCard = fullDeck[currentIndex];
+            if (topCard) setScryingCard(topCard);
+            return currentIndex;
+          });
         }
         
         sendAction('CLAIM_HINT', { hintId: h.id });
@@ -585,6 +593,46 @@ export default function GameEngine() {
                 </div>
               </>
             )}
+          </div>
+        </div>
+      )}
+      {scryingCard && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex flex-col items-center justify-center p-8">
+          <div className="bg-slate-900 border border-cyan-500 rounded-2xl p-8 text-center shadow-[0_0_50px_rgba(6,182,212,0.4)] animate-in fade-in zoom-in">
+            <h2 className="text-2xl font-black text-cyan-400 mb-2 uppercase tracking-widest">Scry</h2>
+            <p className="text-slate-400 mb-6 font-mono text-sm">Review the top card of your deck.</p>
+            <div className="flex justify-center mb-8">
+              <div className="scale-125 transform transition-transform">
+                <Card {...scryingCard} />
+              </div>
+            </div>
+            <div className="flex gap-4 justify-center">
+              <button 
+                onClick={() => {
+                  setScryingCard(null);
+                  setTurnLog(prev => ["You left the card on top of your deck.", ...prev]);
+                }} 
+                className="px-6 py-3 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700 font-bold border border-slate-600 transition-colors tracking-wider text-sm"
+              >
+                LEAVE ON TOP
+              </button>
+              
+              <button 
+                onClick={() => {
+                  setFullDeck(d => {
+                    const newDeck = [...d];
+                    newDeck.push(scryingCard);
+                    return newDeck;
+                  });
+                  setDeckIndex(i => i + 1);
+                  setScryingCard(null);
+                  setTurnLog(prev => ["You put the card on the bottom of your deck.", ...prev]);
+                }} 
+                className="px-6 py-3 bg-cyan-600 text-cyan-50 rounded-lg hover:bg-cyan-500 font-bold border border-cyan-400 transition-colors tracking-wider text-sm shadow-[0_0_15px_rgba(6,182,212,0.5)]"
+              >
+                PUT ON BOTTOM
+              </button>
+            </div>
           </div>
         </div>
       )}
