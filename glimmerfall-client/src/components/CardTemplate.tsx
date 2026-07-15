@@ -121,7 +121,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
       {/* Card Header (Cost & Name) */}
       <div className={`absolute top-0 left-0 right-0 ${minimal ? 'p-1.5' : 'p-3'} flex justify-between items-start z-10 pointer-events-none gap-1`}>
         <div className={`bg-black/60 backdrop-blur-md ${minimal ? 'px-1.5 py-0.5' : 'px-3 py-1'} rounded-br-lg rounded-tl-sm border-b border-r border-white/20 shadow-lg print:shadow-none max-w-[85%]`}>
-          <h3 className={`font-black text-white tracking-wide leading-tight break-words ${minimal ? 'text-[9px]' : 'text-sm'}`} title={card.name}>{card.name}</h3>
+          <h3 className={`font-black text-white tracking-wide truncate ${minimal ? 'text-[9px]' : 'text-sm'}`} title={card.name}>{card.name}</h3>
         </div>
         <div className={`${minimal ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-base'} shrink-0 rounded-full bg-cyan-900/80 backdrop-blur-md border border-cyan-400 flex items-center justify-center shadow-[0_0_10px_rgba(6,182,212,0.5)]`}>
           <span className="font-black text-white">{card.cost}</span>
@@ -139,7 +139,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
           {card.power != null && card.health != null && (
              <div style={{ float: 'right', width: minimal ? '35px' : '65px', height: minimal ? '20px' : '40px', shapeOutside: 'inset(0)' }}></div>
           )}
-          <div className={`${minimal ? 'text-[8px] leading-tight' : (card.description && card.description.length > 100 ? 'text-[10px] leading-tight' : 'text-xs leading-snug')} text-slate-200 italic drop-shadow-md`}>
+          <div className={`${minimal ? 'text-[8px] leading-tight line-clamp-4' : (card.description && card.description.length > 100 ? 'text-[10px] leading-tight line-clamp-[6]' : 'text-xs leading-snug line-clamp-[6]')} text-slate-200 italic drop-shadow-md`}>
             {card.description ? (
               card.description.includes(' — ') ? (
                 <>
