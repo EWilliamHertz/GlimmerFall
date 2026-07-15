@@ -74,7 +74,7 @@ export default async function handler(req, res) {
           owner: player,
           currentHealth: payload.card.health,
           keywords: parseKeywords(payload.card.description),
-          exhausted: true // Summoning sickness
+          exhausted: false // No summoning sickness per user request
         };
         state.battlefield.push(entity);
         state.log.unshift(`Player ${player} summoned ${payload.card.name}.`);

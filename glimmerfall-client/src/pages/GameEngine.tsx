@@ -20,8 +20,8 @@ function EntityDropZone({ id, children }: { id: string, children: React.ReactNod
   );
 }
 
-const isSpell = (card: any) => card.card_type === 'Rite' || card.card_type === 'Flash';
-const isRelic = (card: any) => card.card_type === 'Relic' || card.card_type === 'Artifact';
+const isSpell = (card: any) => card?.card_type === 'Rite' || card?.card_type === 'Flash';
+const isRelic = (card: any) => card?.card_type === 'Relic' || card?.card_type === 'Artifact';
 
 // A spell "requires a target" if its text talks about an entity/creature —
 // otherwise it can be cast by dropping it on your own battlefield with no target.
@@ -404,10 +404,6 @@ export default function GameEngine() {
     // Attack from Battlefield
     else if (battlefield.find(c => c.id === card.id)) {
       if (!card.power) return;
-      if (card.turnSummoned === turn) {
-         setTurnLog(prev => [`${card.name} has summoning sickness and cannot attack this turn.`, ...prev]);
-         return;
-      }
       if (attackedThisTurn.includes(card.id)) {
          setTurnLog(prev => [`${card.name} has already attacked this turn.`, ...prev]);
          return;
@@ -456,35 +452,17 @@ export default function GameEngine() {
   }
 
   const handleMulligan = () => {
-    setMulliganCount(c => c + 1);
+    const nextCount = mulliganCount + 1;
+    setMulliganCount(nextCount);
     const newDeck = [...fullDeck].sort(() => Math.random() - 0.5);
     setFullDeck(newDeck);
-    setHand(newDeck.slice(0, 5));
-    setDeckIndex(5);
+    const drawCount = Math.max(0, 5 - nextCount);
+    setHand(newDeck.slice(0, drawCount));
+    setDeckIndex(drawCount);
   };
 
   const handleKeepHand = () => {
     setHasKeptHand(true);
-    if (mulliganCount > 0) {
-      setHand(prev => {
-        const newHand = [...prev];
-        const discarded: any[] = [];
-        for (let i = 0; i < mulliganCount; i++) {
-          if (newHand.length > 0) {
-            const randomIndex = Math.floor(Math.random() * newHand.length);
-            discarded.push(newHand[randomIndex]);
-            newHand.splice(randomIndex, 1);
-          }
-        }
-        if (discarded.length > 0) {
-          setFullDeck(d => {
-            const updatedDeck = [...d, ...discarded];
-            return updatedDeck.sort(() => Math.random() - 0.5);
-          });
-        }
-        return newHand;
-      });
-    }
     sendAction('READY_MULLIGAN');
   };
 
@@ -585,7 +563,7 @@ export default function GameEngine() {
             ) : (
               <>
                 <p className="text-slate-400 mb-8 text-lg">
-                  {mulliganCount > 0 ? `You have mulliganed ${mulliganCount} time(s). Keeping your hand will discard ${mulliganCount} random card(s).` : 'Review your opening hand. You may reshuffle and redraw.'}
+                  {mulliganCount > 0 ? `You have mulliganed ${mulliganCount} time(s) and drawn ${Math.max(0, 5 - mulliganCount)} cards.` : 'Review your opening hand. You may reshuffle and redraw 1 less card.'}
                 </p>
                 <div className="flex justify-center gap-4 mb-8 scale-90">
                   {hand.map(c => (
@@ -702,12 +680,7 @@ export default function GameEngine() {
                        <span className="text-red-500 font-black tracking-widest rotate-[-15deg] bg-black/80 px-2 py-1 rounded">EXHAUSTED</span>
                      </div>
                   )}
-                  {c.turnSummoned === turn && (
-                     <div className="absolute top-2 right-2 bg-slate-800/80 p-1 rounded pointer-events-none">
-                       <span className="text-[10px] text-yellow-400 font-bold">ZzZ</span>
-                     </div>
-                  )}
-                </div>
+                  </div>
               </EntityDropZone>
             ))}
           </DropZone>
@@ -772,10 +745,10 @@ export default function GameEngine() {
               </div>
             </div>
 
-            <div className="flex gap-4 p-6 bg-slate-900/60 rounded-2xl min-h-[240px] border border-slate-800 flex-1 justify-center relative shadow-inner overflow-x-auto">
-              <div className="absolute top-2 left-4 text-xs font-bold text-slate-500 tracking-widest uppercase">Your Hand</div>
+            <div className="flex gap-4 p-6 bg-slate-900/60 rounded-2xl min-h-[240px] border border-slate-800 flex-1 justify-start overflow-x-auto relative shadow-inner">
+              <div className="absolute top-2 left-4 text-xs font-bold text-slate-500 tracking-widest uppercase sticky left-0 z-20">Your Hand</div>
               {hand.map(c => (
-                <div key={c.id} className="animate-in slide-in-from-bottom-12 fade-in duration-500">
+                <div key={c.id} className="animate-in slide-in-from-bottom-12 fade-in duration-500 flex-shrink-0">
                   <Card {...c} />
                 </div>
               ))}
@@ -791,6 +764,7 @@ export default function GameEngine() {
                   <div className="text-[9px] text-slate-400 font-bold mt-1">{fullDeck.length - deckIndex} Left</div>
                 </div>
               </button>
+              <div className="min-w-[1rem] flex-shrink-0"></div>
             </div>
           </div>
         </div>
