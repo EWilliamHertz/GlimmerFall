@@ -40,6 +40,7 @@ const pool = new Pool({
     if (!state.graveyard) state.graveyard = [];
     if (!state.pendingReturns) state.pendingReturns = [];
     if (!state.pendingHints) state.pendingHints = [];
+    if (!state.log) state.log = [];
     if (state.player1_shield === undefined) state.player1_shield = 0;
     if (state.player2_shield === undefined) state.player2_shield = 0;
     
