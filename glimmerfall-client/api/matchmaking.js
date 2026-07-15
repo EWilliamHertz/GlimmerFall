@@ -20,7 +20,9 @@ export default async function handler(req, res) {
       const result = await client.query("SELECT id, status, player1, player2 FROM matches WHERE room_code = $1 ORDER BY created_at DESC LIMIT 1 FOR UPDATE", [lobbyCode]);
       if (result.rows.length > 0) {
         const match = result.rows[0];
-        if (match.status === 'WAITING') {
+        const isStale = new Date(match.created_at) < new Date(Date.now() - 30 * 60000);
+        
+        if (match.status === 'WAITING' && !isStale) {
           if (match.player1 === username) {
              await client.query('COMMIT');
              return res.status(200).json({ matchId: match.id, player: 1, status: 'WAITING' });
@@ -35,7 +37,7 @@ export default async function handler(req, res) {
           await client.query("UPDATE matches SET player2 = $1, status = 'MULLIGAN', state = $2 WHERE id = $3", [username, initialState, match.id]);
           await client.query('COMMIT');
           return res.status(200).json({ matchId: match.id, player: 2, status: 'MULLIGAN' });
-        } else if (match.status === 'MULLIGAN' || match.status === 'PLAYING') {
+        } else if ((match.status === 'MULLIGAN' || match.status === 'PLAYING') && !isStale) {
           // Check if this is a reconnect
           if (match.player1 === username) {
             await client.query('COMMIT');
@@ -62,8 +64,8 @@ export default async function handler(req, res) {
         return res.status(200).json({ matchId: insert.rows[0].id, player: 1, status: 'WAITING' });
       }
     } else {
-      // Random matchmaking
-      const result = await client.query("SELECT id FROM matches WHERE status = 'WAITING' AND room_code IS NULL AND player1 != $1 LIMIT 1 FOR UPDATE", [username]);
+      // Random matchmaking (don't match into WAITING lobbies older than 30 mins)
+      const result = await client.query("SELECT id FROM matches WHERE status = 'WAITING' AND room_code IS NULL AND player1 != $1 AND created_at > NOW() - INTERVAL '30 minutes' LIMIT 1 FOR UPDATE", [username]);
       if (result.rows.length > 0) {
         const matchId = result.rows[0].id;
         const initialState = {

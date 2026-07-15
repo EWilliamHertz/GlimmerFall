@@ -9,6 +9,7 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
+export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
   const { matchId, player, action, payload } = req.body;
 

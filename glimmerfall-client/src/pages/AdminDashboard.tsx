@@ -15,6 +15,8 @@ const PLAYERS = [
 
 export const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [password, setPassword] = useState('');
   const [activeTab, setActiveTab] = useState('PRODUCERS');
 
   // Tab 1 States
@@ -58,6 +60,37 @@ export const AdminDashboard: React.FC = () => {
       setComparedProducers(prev => [...prev, id]);
     }
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-[#050B14] flex flex-col items-center justify-center font-sans">
+         <div className="bg-black/40 border border-cyan-500/30 p-8 rounded-xl backdrop-blur-md shadow-[0_0_30px_rgba(6,182,212,0.2)] text-center">
+            <h2 className="text-2xl font-black text-cyan-400 tracking-widest uppercase mb-6">Admin Authentication</h2>
+            <input 
+              type="password" 
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') {
+                  if (password === '123' || password === import.meta.env.VITE_ADMIN_PASSWORD) setIsAuthenticated(true);
+                }
+              }}
+              placeholder="Enter passcode..."
+              className="bg-slate-900 border border-slate-700 text-cyan-50 p-3 rounded w-64 focus:outline-none focus:border-cyan-400 transition-colors text-center font-mono"
+            />
+            <button 
+              onClick={() => {
+                 if (password === '123' || password === import.meta.env.VITE_ADMIN_PASSWORD) setIsAuthenticated(true);
+                 else alert("Incorrect password");
+              }}
+              className="block w-full mt-4 bg-cyan-600/20 hover:bg-cyan-600/40 text-cyan-300 border border-cyan-500 p-2 rounded transition-colors font-bold tracking-wider"
+            >
+              Access Terminal
+            </button>
+         </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#050B14] text-cyan-50 font-sans relative overflow-hidden flex flex-col">

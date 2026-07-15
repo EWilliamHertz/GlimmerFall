@@ -72,7 +72,6 @@ function App() {
     { id: '/booster', label: 'Boosters', icon: <ShieldAlert className="w-5 h-5 shrink-0" /> },
     { id: '/decks', label: 'Deck Builder', icon: <LibraryBig className="w-5 h-5 text-purple-400 shrink-0" /> },
     { id: '/play', label: 'Play (Alpha)', icon: <Layers className="w-5 h-5 text-cyan-400 shrink-0" /> },
-    { id: '/admin', label: 'Admin Hub', icon: <Database className="w-5 h-5 text-red-400 shrink-0" /> },
     ...(currentUser ? [] : [{ id: '/auth', label: 'Login', icon: <LogIn className="w-5 h-5 shrink-0" /> }]),
   ];
 
@@ -167,7 +166,7 @@ function App() {
 
         {/* Global Footer */}
         <footer className="w-full border-t border-slate-800/50 bg-slate-950/80 backdrop-blur-md p-6 flex flex-col md:flex-row justify-between items-center text-slate-500 text-sm z-30">
-          <div>© 2026 Glimmerfall TCG. All rights reserved.</div>
+          <div>© 2026 Glimmerfall TCG. All rights reserved. <Link to="/admin" className="ml-2 text-slate-800 hover:text-cyan-900 transition-colors">Admin</Link></div>
           <div className="flex gap-6 mt-4 md:mt-0 font-semibold">
             <Link to="/resources" className="hover:text-cyan-400 transition-colors">Developer API / Resources</Link>
             <Link to="/rulebook" className="hover:text-purple-400 transition-colors">Rulebook</Link>
