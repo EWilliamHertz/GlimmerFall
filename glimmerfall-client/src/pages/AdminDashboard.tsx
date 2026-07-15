@@ -25,6 +25,14 @@ export const AdminDashboard: React.FC = () => {
   const [compareMode, setCompareMode] = useState(false);
   const [comparedProducers, setComparedProducers] = useState<string[]>([PRODUCERS[0].id]);
 
+  // Marketing States
+  const [campaignActive, setCampaignActive] = useState(false);
+  const [budgetTotal, setBudgetTotal] = useState(5000);
+  const [adSpend, setAdSpend] = useState(2500);
+  const [influencerSpend, setInfluencerSpend] = useState(1500);
+  const [promoCode, setPromoCode] = useState('GLIMMER2026');
+  const [promoGenerated, setPromoGenerated] = useState(false);
+
   // Carousel Drag Logic
   const sliderRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -315,11 +323,134 @@ export const AdminDashboard: React.FC = () => {
 
         {/* --- TAB 3: MARKETING --- */}
         {activeTab === 'MARKETING' && (
-          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500 flex flex-col items-center justify-center min-h-[60vh] text-center">
-             <div className="w-24 h-24 rounded-full border-b-4 border-l-4 border-purple-500 animate-spin mb-8 shadow-[0_0_30px_rgba(168,85,247,0.5)]"></div>
-             <h2 className="text-3xl font-black text-white tracking-widest uppercase">Marketing Node Offline</h2>
-             <p className="text-slate-400 max-w-md mt-4">The Campaign Analytics engine is currently compiling pre-launch social engagement data. Please check back later.</p>
-             <button className="mt-8 px-6 py-2 bg-purple-600/20 hover:bg-purple-600/40 border border-purple-500 rounded-md text-purple-100 font-bold tracking-wider transition-all shadow-[0_0_15px_rgba(168,85,247,0.3)]">Force Sync</button>
+          <div className="space-y-6 animate-in fade-in zoom-in-95 duration-500">
+            <div className="flex justify-between items-end mb-6">
+              <div>
+                <h2 className="text-3xl font-black text-purple-400 tracking-wide drop-shadow-[0_0_8px_rgba(168,85,247,0.6)]">Campaign Control Center</h2>
+                <p className="text-purple-300/70 text-sm mt-1">Manage live marketing initiatives, budget allocation, and promo codes.</p>
+              </div>
+              
+              <div className="flex items-center gap-4 bg-black/40 p-3 rounded-xl border border-purple-500/30 backdrop-blur-md">
+                <span className="text-sm font-bold text-slate-300">Campaign Status:</span>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" className="sr-only peer" checked={campaignActive} onChange={() => setCampaignActive(!campaignActive)} />
+                  <div className="w-14 h-7 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-purple-600 shadow-[0_0_15px_rgba(168,85,247,0.4)]"></div>
+                  <span className={`ml-3 text-sm font-black ${campaignActive ? 'text-purple-400 drop-shadow-[0_0_5px_rgba(168,85,247,0.8)]' : 'text-slate-500'}`}>
+                    {campaignActive ? 'LIVE' : 'OFFLINE'}
+                  </span>
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Budget Allocation Panel */}
+              <div className="bg-black/50 backdrop-blur-xl border border-purple-500/20 rounded-xl p-6 shadow-2xl relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-32 h-32 bg-purple-600/10 rounded-full blur-[60px] pointer-events-none"></div>
+                <h3 className="text-xl font-bold text-purple-100 mb-6 flex items-center gap-2">
+                  <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  Budget Allocation ($)
+                </h3>
+                
+                <div className="space-y-6 relative z-10">
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Monthly Budget</label>
+                      <span className="text-emerald-400 font-mono font-bold">${budgetTotal.toLocaleString()}</span>
+                    </div>
+                    <input 
+                      type="range" min="1000" max="20000" step="500"
+                      value={budgetTotal}
+                      onChange={(e) => setBudgetTotal(Number(e.target.value))}
+                      className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                    />
+                  </div>
+
+                  <div className="pt-4 border-t border-purple-500/10">
+                    <div className="flex justify-between mb-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Targeted Ad Spend (Meta/Google)</label>
+                      <span className="text-cyan-400 font-mono font-bold">${adSpend.toLocaleString()}</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max={budgetTotal} step="100"
+                      value={adSpend}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setAdSpend(val);
+                        if (val + influencerSpend > budgetTotal) setInfluencerSpend(budgetTotal - val);
+                      }}
+                      className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between mb-2">
+                      <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Influencer Sponsorships (YouTube/Twitch)</label>
+                      <span className="text-pink-400 font-mono font-bold">${influencerSpend.toLocaleString()}</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max={budgetTotal} step="100"
+                      value={influencerSpend}
+                      onChange={(e) => {
+                        const val = Number(e.target.value);
+                        setInfluencerSpend(val);
+                        if (val + adSpend > budgetTotal) setAdSpend(budgetTotal - val);
+                      }}
+                      className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-pink-500"
+                    />
+                  </div>
+                  
+                  <div className="pt-4 flex justify-between items-center">
+                    <span className="text-xs text-slate-500 font-bold uppercase">Remaining Reserves:</span>
+                    <span className="text-yellow-400 font-mono font-bold">${(budgetTotal - adSpend - influencerSpend).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Promo Generator & Engagement Chart */}
+              <div className="flex flex-col gap-6">
+                <div className="bg-gradient-to-br from-purple-900/30 to-black/50 backdrop-blur-xl border border-purple-500/30 rounded-xl p-6 shadow-[0_0_20px_rgba(168,85,247,0.15)] flex-1">
+                  <h3 className="text-xl font-bold text-purple-100 mb-4 flex items-center gap-2">
+                    <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" /></svg>
+                    Dynamic Promo Code Generator
+                  </h3>
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={promoCode} 
+                      onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                      className="flex-1 bg-slate-900/80 border border-slate-700 text-white font-mono p-3 rounded focus:outline-none focus:border-purple-400 transition-colors uppercase"
+                    />
+                    <button 
+                      onClick={() => {
+                        setPromoGenerated(true);
+                        setTimeout(() => setPromoGenerated(false), 2000);
+                      }}
+                      className="px-6 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded transition-all shadow-[0_0_15px_rgba(168,85,247,0.4)] hover:shadow-[0_0_25px_rgba(168,85,247,0.6)]"
+                    >
+                      {promoGenerated ? 'ACTIVATED' : 'DEPLOY'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-slate-400 mt-3 italic">Deploying a code instantly syncs with the Stripe payment gateway for 20% off all Starter Decks.</p>
+                </div>
+
+                <div className="bg-black/40 backdrop-blur-xl border border-white/10 rounded-xl p-6 relative overflow-hidden flex-1 flex flex-col justify-between">
+                   <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider mb-4">Projected Engagement Yield</h3>
+                   <div className="flex items-end gap-2 h-32 w-full mt-auto opacity-80">
+                     {/* Mock Interactive Bar Chart */}
+                     {[40, 65, 45, 80, 55, 95, 75].map((h, i) => (
+                       <div key={i} className="flex-1 bg-gradient-to-t from-purple-900/50 to-purple-400/80 rounded-t-sm hover:to-cyan-400 hover:scale-105 transition-all cursor-pointer relative group" style={{ height: `${campaignActive ? h : 10}%` }}>
+                         <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-black text-white text-[10px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                           {campaignActive ? Math.floor(h * (budgetTotal/1000)) : 0} Clicks
+                         </div>
+                       </div>
+                     ))}
+                   </div>
+                   <div className="flex justify-between mt-2 text-[10px] text-slate-500 font-bold uppercase">
+                     <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Sun</span>
+                   </div>
+                </div>
+              </div>
+            </div>
           </div>
         )}
 
