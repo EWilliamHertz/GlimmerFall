@@ -34,7 +34,7 @@ export default async function handler(req, res) {
           };
           await client.query("UPDATE matches SET player2 = $1, status = 'MULLIGAN', state = $2 WHERE id = $3", [username, initialState, match.id]);
           await client.query('COMMIT');
-          return res.status(200).json({ matchId: match.id, player: 2 });
+          return res.status(200).json({ matchId: match.id, player: 2, status: 'MULLIGAN' });
         } else if (match.status === 'MULLIGAN' || match.status === 'PLAYING') {
           // Check if this is a reconnect
           if (match.player1 === username) {
@@ -75,7 +75,7 @@ export default async function handler(req, res) {
         };
         await client.query("UPDATE matches SET player2 = $1, status = 'MULLIGAN', state = $2 WHERE id = $3", [username, initialState, matchId]);
         await client.query('COMMIT');
-        return res.status(200).json({ matchId, player: 2 });
+        return res.status(200).json({ matchId, player: 2, status: 'MULLIGAN' });
       } else {
         const insert = await client.query("INSERT INTO matches (player1, status, active_player) VALUES ($1, 'WAITING', $1) RETURNING id", [username]);
         await client.query('COMMIT');

@@ -468,11 +468,19 @@ export default function GameEngine() {
     if (mulliganCount > 0) {
       setHand(prev => {
         const newHand = [...prev];
+        const discarded = [];
         for (let i = 0; i < mulliganCount; i++) {
           if (newHand.length > 0) {
             const randomIndex = Math.floor(Math.random() * newHand.length);
+            discarded.push(newHand[randomIndex]);
             newHand.splice(randomIndex, 1);
           }
+        }
+        if (discarded.length > 0) {
+          setFullDeck(d => {
+            const updatedDeck = [...d, ...discarded];
+            return updatedDeck.sort(() => Math.random() - 0.5);
+          });
         }
         return newHand;
       });
