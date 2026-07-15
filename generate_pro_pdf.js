@@ -27,7 +27,7 @@ async function generateProPDF(deckName) {
   
   await page.evaluate(() => {
     // Extract all card elements from the DOM
-    const cards = Array.from(document.querySelectorAll('.page-wrapper > div[style*="width"]'));
+    const cards = Array.from(document.querySelectorAll('.print-card-wrap > div'));
     
     // Nuke the body
     document.body.innerHTML = '';

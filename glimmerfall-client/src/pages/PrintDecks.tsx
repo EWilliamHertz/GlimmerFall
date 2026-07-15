@@ -20,12 +20,23 @@ export const PrintDecks = () => {
   }, [currentUser]);
   useEffect(() => {
     if (!selectedDeck || !cards.length) return;
-    const deckData = userDecks.find(d => d.deck_name === selectedDeck) || starterDecks.find(d => d.deck_name === selectedDeck);
+    
     const flat: any[] = [];
-    (deckData?.cards || []).forEach((entry: any) => {
-      const card = cards.find(c => c.name === entry.card_name);
-      if (card) for (let i = 0; i < Number(entry.count) || 0; i++) flat.push(card);
-    });
+    if (selectedDeck === 'Full Set (1x each)') {
+      cards.forEach(card => flat.push(card));
+    } else if (selectedDeck === 'Full Set (3x each)') {
+      cards.forEach(card => {
+        flat.push(card);
+        flat.push(card);
+        flat.push(card);
+      });
+    } else {
+      const deckData = userDecks.find(d => d.deck_name === selectedDeck) || starterDecks.find(d => d.deck_name === selectedDeck);
+      (deckData?.cards || []).forEach((entry: any) => {
+        const card = cards.find(c => c.name === entry.card_name);
+        if (card) for (let i = 0; i < Number(entry.count) || 0; i++) flat.push(card);
+      });
+    }
     setDecklist(flat);
   }, [selectedDeck, cards, userDecks, starterDecks]);
 
@@ -62,7 +73,7 @@ export const PrintDecks = () => {
     <div className="no-print p-8 bg-slate-900 text-white mb-8 shadow-md">
       <h1 className="text-3xl font-black text-cyan-400 mb-4">Print Deck to PDF</h1>
       <p className="mb-4 text-slate-300">Every A4 sheet contains exactly nine fixed card positions (3 × 3). The final sheet uses blank positions so cards never shift or create uneven pages.</p>
-      <div className="flex gap-4"><select className="p-3 rounded bg-slate-800 border border-slate-700 text-white font-bold w-full max-w-md" value={selectedDeck} onChange={e => setSelectedDeck(e.target.value)}><option value="">-- Select a Deck --</option><optgroup label="Your Decks">{userDecks.map(d => <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>)}</optgroup><optgroup label="Starter & Tournament Decks">{starterDecks.map(d => <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>)}</optgroup></select><button onClick={handlePrint} className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded font-bold">Print Now</button></div>
+      <div className="flex gap-4"><select className="p-3 rounded bg-slate-800 border border-slate-700 text-white font-bold w-full max-w-md" value={selectedDeck} onChange={e => setSelectedDeck(e.target.value)}><option value="">-- Select a Deck --</option><optgroup label="Entire Set"><option value="Full Set (1x each)">Full Set (1x each)</option><option value="Full Set (3x each)">Full Set (3x each)</option></optgroup><optgroup label="Your Decks">{userDecks.map(d => <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>)}</optgroup><optgroup label="Starter & Tournament Decks">{starterDecks.map(d => <option key={d.deck_name} value={d.deck_name}>{d.deck_name}</option>)}</optgroup></select><button onClick={handlePrint} className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded font-bold">Print Now</button></div>
     </div>
     <div className="print-content" style={{background:'#fff'}}>
       {pages.map((page, pageIndex) => <div key={pageIndex} className="print-sheet" style={{width:'180mm', height:'251.4mm', margin:'10mm auto', background:'#fff', display:'grid', gridTemplateColumns:`repeat(3, ${CARD_W})`, gridTemplateRows:`repeat(3, ${CARD_H})`, overflow:'hidden'}}>
