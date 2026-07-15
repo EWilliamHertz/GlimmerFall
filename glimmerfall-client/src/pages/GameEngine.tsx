@@ -6,6 +6,7 @@ import { CardTemplate } from '../components/CardTemplate'
 import { User, ShieldAlert, Zap, Loader2, Swords, Book } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { STARTER_DECK_KEYS } from '../constants/starterDecks';
+import { playSound } from '../utils/sounds';
 
 // Helper to generate unique ids
 const generateId = (prefix: string) => `${prefix}_${Math.random().toString(36).substr(2, 9)}`;
@@ -339,7 +340,7 @@ export default function GameEngine() {
       if (over.id === 'battlefield') {
         if (isSpell(card)) {
           if (spellRequiresEntityTarget(card)) {
-            setTurnLog(prev => [`${card.name} needs a target — drop it on an entity or the enemy Vanguard.`, ...prev]);
+            setTurnLog(prev => [`${card.name} needs a target — drop it on an entity or the enemy Nexus.`, ...prev]);
             return;
           }
           if (energy < card.cost) {
@@ -353,10 +354,11 @@ export default function GameEngine() {
           return;
         }
         if (entityRequiresDeployTarget(card)) {
-           setTurnLog(prev => [`${card.name} requires a target. Drag it directly onto an entity or the enemy Vanguard.`, ...prev]);
+           setTurnLog(prev => [`${card.name} requires a target. Drag it directly onto an entity or the enemy Nexus.`, ...prev]);
            return;
         }
         if (energy >= card.cost) {
+          playSound('entity');
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
           await sendAction('PLAY_CARD', { zone: 'battlefield', card: { ...card, turnSummoned: turn } });
@@ -365,6 +367,7 @@ export default function GameEngine() {
         }
       } else if (over.id === 'resonance') {
         if (hasResonatedThisTurn) return;
+        playSound('node');
         setHand(hand.filter(c => c.id !== card.id));
         setEnergy(e => e + 1);
         setHasResonatedThisTurn(true);
@@ -385,6 +388,7 @@ export default function GameEngine() {
             return;
           }
           const handSizeAfterCast = hand.length - 1;
+          playSound('spell');
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
           await sendAction('CAST_SPELL', { card, targetId: over.id as string, casterHandSize: handSizeAfterCast });
@@ -394,6 +398,7 @@ export default function GameEngine() {
             setTurnLog(prev => [`Not enough energy to play ${card.name}.`, ...prev]);
             return;
           }
+          playSound('entity');
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
           await sendAction('PLAY_CARD', { zone: 'battlefield', card: { ...card, turnSummoned: turn }, targetId: over.id as string });
@@ -415,6 +420,7 @@ export default function GameEngine() {
           setTurnLog(prev => [`${card.name} must attack a Guard Entity — the opponent has one in play!`, ...prev]);
           return;
         }
+        playSound('attack_nexus');
         setAttackedThisTurn(prev => [...prev, card.id]);
         await sendAction('ATTACK_VANGUARD', { power: card.power, attackerId: card.id });
       } else if (opponentBattlefield.find(c => c.id === over.id)) {
@@ -432,6 +438,7 @@ export default function GameEngine() {
           setTurnLog(prev => [`${card.name} must attack a Guard Entity — the opponent has one in play!`, ...prev]);
           return;
         }
+        playSound('attack_entity');
         setAttackedThisTurn(prev => [...prev, card.id]);
         await sendAction('ATTACK_ENTITY', { targetId: over.id, power: card.power, attackerId: card.id });
       }
@@ -592,7 +599,7 @@ export default function GameEngine() {
                   <ShieldAlert className="w-7 h-7" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-red-400 text-lg">Enemy Vanguard</h3>
+                  <h3 className="font-bold text-red-400 text-lg">Enemy Nexus</h3>
                   <p className="text-sm text-slate-400 font-mono">{opponentHp} Nexus HP</p>
                 </div>
               </div>
