@@ -468,7 +468,7 @@ export default function GameEngine() {
     if (mulliganCount > 0) {
       setHand(prev => {
         const newHand = [...prev];
-        const discarded = [];
+        const discarded: any[] = [];
         for (let i = 0; i < mulliganCount; i++) {
           if (newHand.length > 0) {
             const randomIndex = Math.floor(Math.random() * newHand.length);
