@@ -87,7 +87,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
   return (
     <div 
       ref={cardRef}
-      className={`relative w-full aspect-[2.5/3.5] rounded-xl overflow-hidden border-2 ${config.border} shadow-xl flex flex-col justify-end group bg-black cursor-pointer`}
+      className={`relative w-full aspect-[2.5/3.5] rounded-xl print:rounded-none overflow-hidden border-2 print:border-none ${config.border} shadow-xl print:shadow-none flex flex-col justify-end group bg-black cursor-pointer`}
       style={{ 
         transform, 
         transition: transform ? 'none' : 'transform 0.5s cubic-bezier(0.25, 1, 0.5, 1)',
