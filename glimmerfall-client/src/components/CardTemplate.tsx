@@ -10,6 +10,7 @@ interface CardProps {
   rarity: string;
   set_name?: string;
   collector_number?: number;
+  faction?: string;
 }
 
 export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({ card, minimal }) => {
@@ -26,6 +27,14 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
   };
 
   const config = rarityConfig[card.rarity as keyof typeof rarityConfig] || rarityConfig['Common'];
+
+  const factionConfig = {
+    'Solari': { bg: 'bg-yellow-900/80', border: 'border-yellow-400', shadow: 'shadow-[0_0_10px_rgba(250,204,21,0.5)]', tint: 'rgba(250, 204, 21, 0.1)' },
+    'Umbri': { bg: 'bg-purple-900/80', border: 'border-purple-400', shadow: 'shadow-[0_0_10px_rgba(192,132,252,0.5)]', tint: 'rgba(168, 85, 247, 0.1)' },
+    'Terra': { bg: 'bg-green-900/80', border: 'border-green-400', shadow: 'shadow-[0_0_10px_rgba(74,222,128,0.5)]', tint: 'rgba(34, 197, 94, 0.1)' },
+    'Aether': { bg: 'bg-sky-900/80', border: 'border-sky-400', shadow: 'shadow-[0_0_10px_rgba(56,189,248,0.5)]', tint: 'rgba(56, 189, 248, 0.1)' }
+  };
+  const fConfig = card.faction ? factionConfig[card.faction as keyof typeof factionConfig] : { bg: 'bg-cyan-900/80', border: 'border-cyan-400', shadow: 'shadow-[0_0_10px_rgba(6,182,212,0.5)]', tint: 'transparent' };
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!cardRef.current) return;
@@ -116,6 +125,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
           }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent"></div>
+        {card.faction && <div className="absolute inset-0 pointer-events-none mix-blend-color" style={{ backgroundColor: fConfig.tint }}></div>}
       </div>
 
       {/* Card Header (Cost & Name) */}
@@ -123,7 +133,7 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
         <div className={`bg-black/60 backdrop-blur-md ${minimal ? 'px-1.5 py-0.5' : 'px-3 py-1'} rounded-br-lg rounded-tl-sm border-b border-r border-white/20 shadow-lg print:shadow-none max-w-[85%]`}>
           <h3 className={`font-black text-white tracking-wide truncate ${minimal ? 'text-[9px]' : 'text-sm'}`} title={card.name}>{card.name}</h3>
         </div>
-        <div className={`${minimal ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-base'} shrink-0 rounded-full bg-cyan-900/80 backdrop-blur-md border border-cyan-400 flex items-center justify-center shadow-[0_0_10px_rgba(6,182,212,0.5)]`}>
+        <div className={`${minimal ? 'w-6 h-6 text-xs' : 'w-8 h-8 text-base'} shrink-0 rounded-full ${fConfig.bg} backdrop-blur-md border ${fConfig.border} flex items-center justify-center ${fConfig.shadow}`}>
           <span className="font-black text-white">{card.cost}</span>
         </div>
       </div>
@@ -131,7 +141,9 @@ export const CardTemplate: React.FC<{ card: CardProps; minimal?: boolean }> = ({
       {/* Card Footer (Type, Description, Stats) */}
       <div className={`relative z-10 ${minimal ? 'p-1.5 mx-1 mb-2' : 'p-3 mx-2 mb-4'} bg-slate-950/70 backdrop-blur-xl border border-slate-400/30 rounded-lg flex flex-col pointer-events-none shadow-inner print:shadow-none`}>
         <div className={`flex justify-between items-center mb-1 ${minimal ? 'pb-0.5' : 'pb-1'} border-b border-slate-400/20`}>
-          <span className={`${minimal ? 'text-[8px]' : 'text-[10px]'} font-bold text-cyan-100 uppercase tracking-widest drop-shadow-md`}>{card.card_type}</span>
+          <span className={`${minimal ? 'text-[8px]' : 'text-[10px]'} font-bold text-cyan-100 uppercase tracking-widest drop-shadow-md`}>
+            {card.faction ? `${card.faction} ${card.card_type}` : card.card_type}
+          </span>
           <RarityIcon />
         </div>
         

@@ -1,6 +1,6 @@
 import pkg from 'pg';
 const { Pool } = pkg;
-import { resolveSpellEffect, damageNexus } from './_lib/effects.js';
+import { resolveSpellEffect, damageNexus, preventDestruction } from './_lib/effects.js';
 import { parseKeywords } from './_lib/keywords.js';
 import { resolveDeployTrigger, resolveDestroyTrigger } from './_lib/entityTriggers.js';
 
@@ -55,8 +55,14 @@ export default async function handler(req, res) {
       match.current_turn += 1;
       state.log.unshift(`Turn ${match.current_turn} begins.`);
       
-      // Clear exhaustion and temporary guard for the NEW active player's entities
       const activePlayerNum = match.active_player === match.player1 ? 1 : 2;
+      state[`hasDrawnThisTurn_1`] = false;
+      state[`hasDrawnThisTurn_2`] = false;
+      state[`hasResonatedThisTurn_1`] = false;
+      state[`hasResonatedThisTurn_2`] = false;
+      state[`energy_${activePlayerNum}`] = state.resonance.filter(c => c.owner === activePlayerNum).length;
+      
+      // Clear exhaustion and temporary guard for the NEW active player's entities
       state.battlefield.forEach(c => {
          // Cleanup end of turn debuffs/buffs
          if (c.endOfTurnBuffs) {
@@ -116,6 +122,15 @@ export default async function handler(req, res) {
         match.status = state.player1_hp <= 0 ? 'PLAYER 2 WINS' : 'PLAYER 1 WINS';
         state.log.unshift(`MATCH OVER! ${match.status}!`);
       }
+      if (attacker?.name === 'Bramble Stag') {
+        state.battlefield.push({
+          id: `tok_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          name: `Sapling Token`, card_type: 'Entity', cost: 0,
+          power: 1, health: 1, currentHealth: 1,
+          owner: player, turnSummoned: match.current_turn,
+        });
+        state.log.unshift(`Bramble Stag creates a 1/1 Sapling token!`);
+      }
     } else if (action === 'ATTACK_ENTITY') {
       const attacker = state.battlefield.find(c => c.id === payload.attackerId);
       if (attacker) attacker.exhausted = true;
@@ -157,30 +172,34 @@ export default async function handler(req, res) {
         
         // Handle attacker death
         if (attacker.currentHealth <= 0) {
-          state.log.unshift(`${attacker.name} was destroyed in combat!`);
-          const attackerIndex = state.battlefield.findIndex(c => c.id === payload.attackerId);
-          if (attackerIndex !== -1) state.battlefield.splice(attackerIndex, 1);
-          state.voidZone.push(attacker);
-          const { logs: destroyLogs, clientHints } = resolveDestroyTrigger({ state, entity: attacker, turn: match.current_turn });
-          destroyLogs.forEach(l => state.log.unshift(l));
-          mergeHints(state, clientHints, player);
+          if (!preventDestruction(state, attacker, state.log)) {
+            state.log.unshift(`${attacker.name} was destroyed in combat!`);
+            const attackerIndex = state.battlefield.findIndex(c => c.id === payload.attackerId);
+            if (attackerIndex !== -1) state.battlefield.splice(attackerIndex, 1);
+            state.voidZone.push(attacker);
+            const { logs: destroyLogs, clientHints } = resolveDestroyTrigger({ state, entity: attacker, turn: match.current_turn });
+            destroyLogs.forEach(l => state.log.unshift(l));
+            mergeHints(state, clientHints, player);
+          }
         }
 
         // Handle target death
         if (target.currentHealth <= 0) {
-          state.log.unshift(`${target.name} was destroyed!`);
-          const newTargetIndex = state.battlefield.findIndex(c => c.id === payload.targetId);
-          if (newTargetIndex !== -1) state.battlefield.splice(newTargetIndex, 1);
-          state.voidZone.push(target);
-          const { logs: destroyLogs, clientHints } = resolveDestroyTrigger({ state, entity: target, turn: match.current_turn });
-          destroyLogs.forEach(l => state.log.unshift(l));
-          mergeHints(state, clientHints, player);
-          if (attacker?.keywords?.overwhelm && damage > healthBefore) {
-            const excess = damage - healthBefore;
-            const spillLogs = [];
-            damageNexus(state, opponentNum, excess, spillLogs);
-            for (let i = spillLogs.length - 1; i >= 0; i--) state.log.unshift(spillLogs[i]);
-            state.log.unshift(`${attacker.name}'s Overwhelm spills ${excess} damage to the enemy Nexus!`);
+          if (!preventDestruction(state, target, state.log)) {
+            state.log.unshift(`${target.name} was destroyed!`);
+            const newTargetIndex = state.battlefield.findIndex(c => c.id === payload.targetId);
+            if (newTargetIndex !== -1) state.battlefield.splice(newTargetIndex, 1);
+            state.voidZone.push(target);
+            const { logs: destroyLogs, clientHints } = resolveDestroyTrigger({ state, entity: target, turn: match.current_turn });
+            destroyLogs.forEach(l => state.log.unshift(l));
+            mergeHints(state, clientHints, player);
+            if (attacker?.keywords?.overwhelm && damage > healthBefore) {
+              const excess = damage - healthBefore;
+              const spillLogs = [];
+              damageNexus(state, opponentNum, excess, spillLogs);
+              for (let i = spillLogs.length - 1; i >= 0; i--) state.log.unshift(spillLogs[i]);
+              state.log.unshift(`${attacker.name}'s Overwhelm spills ${excess} damage to the enemy Nexus!`);
+            }
           }
         }
         if (attacker?.keywords?.stealth) {

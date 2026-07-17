@@ -21,7 +21,7 @@ function EntityDropZone({ id, children }: { id: string, children: React.ReactNod
   );
 }
 
-const isSpell = (card: any) => card?.card_type === 'Rite' || card?.card_type === 'Flash' || card?.card_type === 'Relic';
+const isSpell = (card: any) => card?.card_type === 'Hex' || card?.card_type === 'Flash' || card?.card_type === 'Relic';
 const isRelic = (card: any) => card?.card_type === 'Relic' || card?.card_type === 'Artifact';
 
 // A spell "requires a target" if its text talks about an entity/creature —

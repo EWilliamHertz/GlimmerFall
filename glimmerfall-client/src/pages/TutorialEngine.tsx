@@ -149,7 +149,7 @@ export default function TutorialEngine() {
     // Play from Hand
     if (hand.find(c => c.id === card.id)) {
       if (over.id === 'battlefield') {
-        if (card.card_type === 'Rite' || card.card_type === 'Flash') return;
+        if (card.card_type === 'Hex' || card.card_type === 'Flash') return;
         if (energy >= card.cost) {
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
@@ -162,7 +162,7 @@ export default function TutorialEngine() {
         setHasResonatedThisTurn(true);
         sendAction('PLAY_CARD', { zone: 'resonanceRow', card });
       } else if (over.id === 'opponent_vanguard') {
-        if ((card.card_type === 'Rite' || card.card_type === 'Flash') && energy >= card.cost) {
+        if ((card.card_type === 'Hex' || card.card_type === 'Flash') && energy >= card.cost) {
           setHand(hand.filter(c => c.id !== card.id));
           setEnergy(e => e - card.cost);
           sendAction('ATTACK_VANGUARD', { power: 3 }); // Hardcoded for spell MVP

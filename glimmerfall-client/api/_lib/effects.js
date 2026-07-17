@@ -1,3 +1,4 @@
+import { parseKeywords } from "./keywords.js";
 // Spell effect resolver, built against the actual GlimmerFall card text export.
 //
 // Coverage in this version:
@@ -45,7 +46,22 @@ function findEntity(state, targetId) {
   return state.battlefield.find(c => c.id === targetId);
 }
 
-function destroyEntity(state, entity, logs, destroyed) {
+export function preventDestruction(state, entity, logs) {
+  if (!state.turnFlags) state.turnFlags = {};
+  if (entity.keywords?.guard) {
+    const canopies = state.battlefield.filter(c => c.owner === entity.owner && c.name === 'Ancient Canopy');
+    if (canopies.length > 0 && !state.turnFlags[`canopy_prevented_${entity.owner}`]) {
+      state.turnFlags[`canopy_prevented_${entity.owner}`] = true;
+      logs.push(`Ancient Canopy prevents the destruction of ${entity.name}!`);
+      if (entity.currentHealth <= 0) entity.currentHealth = 1;
+      return true;
+    }
+  }
+  return false;
+}
+
+export function destroyEntity(state, entity, logs, destroyed) {
+  if (preventDestruction(state, entity, logs)) return;
   const idx = state.battlefield.findIndex(c => c.id === entity.id);
   if (idx === -1) return;
   logs.push(`${entity.name} was destroyed!`);
@@ -312,6 +328,7 @@ export function resolveSpellEffect({ state, player, card, targetId, targetId2, t
           name: `${name} Token`, card_type: 'Entity', cost: 0,
           power, health, currentHealth: health,
           owner: player, turnSummoned: turn,
+          keywords: parseKeywords(desc)
         });
       }
       logs.push(`${card.name} creates ${count} ${name} token(s).`);

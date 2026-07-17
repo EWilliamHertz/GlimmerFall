@@ -11,11 +11,13 @@ interface CardProps {
   rarity?: string;
   card_type?: string;
   description?: string;
+  faction?: string;
 }
 
 export const Card: React.FC<CardProps> = ({ 
   id, name, cost, power = 1, health = 1, 
-  rarity = 'Common', card_type = 'Entity', description = 'Simulated resonance data.' 
+  rarity = 'Common', card_type = 'Entity', description = 'Simulated resonance data.',
+  faction
 }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: id,
@@ -54,9 +56,8 @@ export const Card: React.FC<CardProps> = ({
       className={`w-32 md:w-40 shrink-0 cursor-grab active:cursor-grabbing ${isDragging ? 'shadow-[0_0_40px_rgba(6,182,212,0.6)] rounded-xl' : ''}`}
     >
       <div className="pointer-events-none w-full h-full">
-        <CardTemplate card={{ name, cost, power, health, rarity, card_type, description }} minimal={true} />
+        <CardTemplate card={{ name, cost, power, health, rarity, card_type, description, faction }} minimal={true} />
       </div>
     </div>
   );
 };
-
