@@ -132,6 +132,80 @@ const CARD_OVERRIDES = {
     logs.push(`${target.name} returns to its owner's hand.`);
     return true;
   },
+  'Purge the Gloom': ({ state, card, targetId, logs, destroyed, clientHints }) => {
+    const target = findEntity(state, targetId);
+    if (!target) { logs.push(`${card.name} needed a valid target.`); return true; }
+    destroyEntity(state, target, logs, destroyed);
+    clientHints.draw = 1;
+    return true;
+  },
+  'Displacement Field': ({ state, card, targetId, logs }) => {
+    const target = findEntity(state, targetId);
+    if (!target) { logs.push(`${card.name} needed a valid target.`); return true; }
+    destroyEntity(state, target, []); 
+    logs.push(`${target.name} is exiled by ${card.name}!`);
+    return true;
+  },
+  'Unmake': ({ state, card, targetId, logs, destroyed }) => {
+    const target = findEntity(state, targetId);
+    if (!target) { logs.push(`${card.name} needed a valid target.`); return true; }
+    destroyEntity(state, target, logs, destroyed);
+    return true;
+  },
+  'Landslide Verdict': ({ state, card, targetId, logs, destroyed }) => {
+    const target = findEntity(state, targetId);
+    if (target && target.power <= 3) {
+      destroyEntity(state, target, logs, destroyed);
+    } else {
+      logs.push(`${card.name} needs a target with Power 3 or less.`);
+    }
+    return true;
+  },
+  'Eclipse Ritual': ({ state, card, logs, clientHints, destroyed }) => {
+    [1, 2].forEach(p => {
+      const e = state.battlefield.filter(c => c.owner === p);
+      e.slice(0, 2).forEach(target => destroyEntity(state, target, logs, destroyed));
+    });
+    clientHints.draw = 2;
+    logs.push(`${card.name} causes both players to sacrifice up to two Entities!`);
+    return true;
+  },
+  'Seismic Stomp': ({ state, card, targetId, targetId2, logs }) => {
+    const a = findEntity(state, targetId);
+    const b = findEntity(state, targetId2);
+    if (a) { a.exhausted = true; logs.push(`${a.name} is exhausted by Seismic Stomp.`); }
+    if (b) { b.exhausted = true; logs.push(`${b.name} is exhausted by Seismic Stomp.`); }
+    return true;
+  },
+  'Refracted Fate': ({ state, card, logs, clientHints }) => {
+    clientHints.scry = 2;
+    logs.push(`${card.name} lets you scry 2.`);
+    return true;
+  },
+  'Verdict of Embers': ({ state, player, card, targetId, logs, destroyed }) => {
+    const target = findEntity(state, targetId);
+    if (!target) { logs.push(`${card.name} needed a valid target.`); return true; }
+    damageEntity(state, target, 3, logs, destroyed);
+    if (target.currentHealth <= 0) {
+      if (player === 1) state.player1_hp += 2; else state.player2_hp += 2;
+      logs.push(`...and it was destroyed! Your Nexus heals 2.`);
+    }
+    return true;
+  },
+  'Earthshatter': ({ state, card, logs, destroyed }) => {
+    state.battlefield.forEach(e => damageEntity(state, e, 3, logs, destroyed));
+    logs.push(`Earthshatter deals 3 damage to all Entities!`);
+    return true;
+  },
+  'Grasping Shadows': ({ state, card, targetId, logs, destroyed }) => {
+    const target = findEntity(state, targetId);
+    if (target && target.exhausted) {
+      destroyEntity(state, target, logs, destroyed);
+    } else {
+      logs.push(`${card.name} can only destroy an exhausted Entity.`);
+    }
+    return true;
+  },
 };
 
 export function resolveSpellEffect({ state, player, card, targetId, targetId2, turn, casterHandSize }) {
@@ -160,6 +234,7 @@ export function resolveSpellEffect({ state, player, card, targetId, targetId2, t
     const drawMatch = desc.match(/draw\s+(a|an|one|two|three|four|five|\d+)\s+cards?/i);
     const discardMatch = desc.match(/discard\s+(a|an|one|two|three|four|five|\d+)\s+cards?/i);
     const tokenMatch = desc.match(/create\s+(a|an|one|two|three|four|\d+)\s+(\d+)\s*\/\s*(\d+)\s+(.+?)\s+tokens?\b/i);
+    const endPhaseMatch = /until end (of turn|Phase)/i.test(desc);
 
     let handled = false;
 
@@ -199,7 +274,17 @@ export function resolveSpellEffect({ state, player, card, targetId, targetId2, t
       explicitTarget.power = (explicitTarget.power || 0) + p;
       explicitTarget.health = (explicitTarget.health || 0) + h;
       explicitTarget.currentHealth = (explicitTarget.currentHealth ?? explicitTarget.health) + h;
-      logs.push(`${explicitTarget.name} gets +${p}/+${h}.`);
+      let extraLog = '';
+      if (/and Guard/i.test(desc)) {
+        if (!explicitTarget.keywords) explicitTarget.keywords = {};
+        explicitTarget.keywords.guard = true;
+        extraLog = ' and Guard';
+      }
+      if (endPhaseMatch) {
+         if (!explicitTarget.endOfTurnBuffs) explicitTarget.endOfTurnBuffs = [];
+         explicitTarget.endOfTurnBuffs.push({ power: -p, health: -h });
+      }
+      logs.push(`${explicitTarget.name} gets +${p}/+${h}${extraLog}${endPhaseMatch ? ' until End Phase' : ''}.`);
       handled = true;
     }
 
@@ -208,7 +293,11 @@ export function resolveSpellEffect({ state, player, card, targetId, targetId2, t
       explicitTarget.power = Math.max(0, (explicitTarget.power || 0) - p);
       explicitTarget.health = Math.max(1, (explicitTarget.health || 0) - h);
       explicitTarget.currentHealth = Math.min(explicitTarget.currentHealth ?? explicitTarget.health, explicitTarget.health);
-      logs.push(`${explicitTarget.name} gets -${p}/-${h}.`);
+      if (endPhaseMatch) {
+         if (!explicitTarget.endOfTurnBuffs) explicitTarget.endOfTurnBuffs = [];
+         explicitTarget.endOfTurnBuffs.push({ power: p, health: h });
+      }
+      logs.push(`${explicitTarget.name} gets -${p}/-${h}${endPhaseMatch ? ' until End Phase' : ''}.`);
       handled = true;
     }
 

@@ -28,7 +28,7 @@ export default async function handler(req, res) {
              return res.status(200).json({ matchId: match.id, player: 1, status: 'WAITING' });
           }
           const initialState = {
-            player1_hp: 20, player2_hp: 20,
+            player1_hp: 25, player2_hp: 25,
             player1_hand: 5, player2_hand: 5,
             player1_ready: false, player2_ready: false,
             battlefield: [], resonanceRow: [], graveyard: [], pendingReturns: [], pendingHints: [], player1_shield: 0, player2_shield: 0,
@@ -69,7 +69,7 @@ export default async function handler(req, res) {
       if (result.rows.length > 0) {
         const matchId = result.rows[0].id;
         const initialState = {
-          player1_hp: 20, player2_hp: 20,
+          player1_hp: 25, player2_hp: 25,
           player1_hand: 5, player2_hand: 5,
           player1_ready: false, player2_ready: false,
           battlefield: [], resonanceRow: [], graveyard: [], pendingReturns: [], pendingHints: [], player1_shield: 0, player2_shield: 0,

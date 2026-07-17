@@ -206,10 +206,7 @@ export const Rulebook = () => {
                       <h4 className="text-lg font-bold text-red-400 mb-1">Lethal</h4>
                       <p className="text-slate-400 text-sm">Any amount of damage dealt by this entity to another entity is enough to instantly destroy it, regardless of the defender's remaining Health.</p>
                     </div>
-                    <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-xl">
-                      <h4 className="text-lg font-bold text-yellow-400 mb-1">Swift</h4>
-                      <p className="text-slate-400 text-sm">This entity can attack on the exact same turn it is played, completely bypassing standard summoning sickness.</p>
-                    </div>
+
                     <div className="bg-slate-950/40 border border-slate-800 p-5 rounded-xl">
                       <h4 className="text-lg font-bold text-purple-400 mb-1">Overwhelm</h4>
                       <p className="text-slate-400 text-sm">If this entity attacks and is intercepted, any excess damage beyond the defending entity's Health is dealt directly to the opponent's Nexus (Bleed-through damage).</p>

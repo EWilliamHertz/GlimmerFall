@@ -35,8 +35,27 @@ async function generateProPDF(deckName) {
     const container = document.createElement('div');
     document.body.appendChild(container);
     
+    // 1. One Card Back
+    const backPage = document.createElement('div');
+    backPage.style.width = '69mm';
+    backPage.style.height = '94mm';
+    backPage.style.display = 'flex';
+    backPage.style.justifyContent = 'center';
+    backPage.style.alignItems = 'center';
+    backPage.style.pageBreakAfter = 'always';
+    backPage.style.background = '#000000';
+    
+    const backImg = document.createElement('img');
+    backImg.src = '/baked_cardback.png';
+    backImg.style.width = '63mm';
+    backImg.style.height = '88mm';
+    backImg.style.objectFit = 'contain';
+    
+    backPage.appendChild(backImg);
+    container.appendChild(backPage);
+    
+    // 2. 40 Designs of the cards
     cards.forEach(card => {
-        // Front Page (Card centered in 69x94 black bleed box)
         const frontPage = document.createElement('div');
         frontPage.style.width = '69mm';
         frontPage.style.height = '94mm';
@@ -50,25 +69,6 @@ async function generateProPDF(deckName) {
         card.style.margin = '0';
         frontPage.appendChild(card);
         container.appendChild(frontPage);
-        
-        // Back Page
-        const backPage = document.createElement('div');
-        backPage.style.width = '69mm';
-        backPage.style.height = '94mm';
-        backPage.style.display = 'flex';
-        backPage.style.justifyContent = 'center';
-        backPage.style.alignItems = 'center';
-        backPage.style.pageBreakAfter = 'always';
-        backPage.style.background = '#000000';
-        
-        const backImg = document.createElement('img');
-        backImg.src = '/baked_cardback.png';
-        backImg.style.width = '63mm';
-        backImg.style.height = '88mm';
-        backImg.style.objectFit = 'contain';
-        
-        backPage.appendChild(backImg);
-        container.appendChild(backPage);
     });
     
     // Return a promise that resolves when all injected images are fully loaded
@@ -109,7 +109,7 @@ async function run() {
   await page.waitForSelector('select option', { state: 'attached' });
   await page.waitForFunction(() => document.querySelectorAll('select option').length > 1);
   
-  const options = await page.$$eval('select option', opts => opts.map(o => o.value).filter(v => v !== ''));
+  const options = await page.$$eval('select option', opts => opts.map(o => o.value).filter(v => v !== '' && !v.includes('Full Set')));
   console.log('Available decks to generate:', options);
   await browser.close();
   

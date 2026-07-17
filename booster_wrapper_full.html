@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Inter:wght@400;700;900&display=swap');
+  
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 164mm;
+    height: 125mm;
+    background: #ffffff;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    overflow: hidden;
+  }
+  
+  .wrapper-container {
+    width: 164mm;
+    height: 125mm;
+    position: relative;
+    background: radial-gradient(circle at center, #1e293b 0%, #020617 100%);
+    overflow: hidden;
+    color: white;
+    font-family: 'Inter', sans-serif;
+  }
+  
+  /* Crimp Guides */
+  .crimp-top, .crimp-bottom {
+    position: absolute;
+    left: 0;
+    width: 100%;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,0.08) 0px, rgba(255,255,255,0.08) 1.5px, transparent 1.5px, transparent 4px);
+    z-index: 50;
+    box-shadow: inset 0 2px 10px rgba(0,0,0,0.8);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    pointer-events: none;
+  }
+  .crimp-top { top: 0; height: 15mm; border-bottom: 1px solid rgba(0,0,0,0.8); }
+  .crimp-bottom { bottom: 0; height: 10mm; border-top: 1px solid rgba(0,0,0,0.8); }
+  
+  /* Sections */
+  .glue-left { position: absolute; left: 0; top: 0; width: 10mm; height: 125mm; background: #0f172a; border-right: 1px dashed rgba(255,255,255,0.2); }
+  .back-left { position: absolute; left: 10mm; top: 0; width: 36mm; height: 125mm; border-right: 1px dashed rgba(255,255,255,0.2); padding: 16mm 4mm 12mm 4mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .front-face { position: absolute; left: 46mm; top: 0; width: 72mm; height: 125mm; border-right: 1px dashed rgba(255,255,255,0.2); display: flex; flex-direction: column; justify-content: center; align-items: center; position: relative; overflow: hidden; }
+  .back-right { position: absolute; left: 118mm; top: 0; width: 36mm; height: 125mm; border-right: 1px dashed rgba(255,255,255,0.2); padding: 16mm 4mm 12mm 4mm; display: flex; flex-direction: column; justify-content: space-between; }
+  .glue-right { position: absolute; left: 154mm; top: 0; width: 10mm; height: 125mm; background: #0f172a; }
+
+  /* Artwork and Overlay */
+  .front-art {
+    position: absolute;
+    top: 15mm; /* Below crimp */
+    left: 0;
+    width: 100%;
+    height: 70mm;
+    object-fit: cover;
+    object-position: center 20%;
+    z-index: 2;
+  }
+  .art-overlay {
+    position: absolute;
+    top: 15mm;
+    left: 0;
+    width: 100%;
+    height: 70mm;
+    background: linear-gradient(to bottom, transparent 30%, #020617 100%);
+    z-index: 3;
+    pointer-events: none;
+  }
+
+  .content-z { position: relative; z-index: 10; width: 100%; display: flex; flex-direction: column; align-items: center; text-align: center; }
+
+  .logo-img {
+    width: 60mm;
+    height: auto;
+    object-fit: contain;
+    margin-top: 62mm; /* Pushed further down over the faded art */
+    filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.8));
+  }
+
+  .subtitle { 
+    font-family: 'Cinzel', serif; 
+    font-size: 10px; 
+    color: #cbd5e1; 
+    text-transform: uppercase; 
+    margin-top: -16mm; 
+    position: relative;
+    z-index: 20; 
+    filter: drop-shadow(0 0 4px black);
+  }
+  
+  .series { 
+    font-size: 14px; 
+    font-weight: 900; 
+    color: #fcd34d; 
+    text-transform: uppercase; 
+    margin-top: 2mm; 
+    position: relative;
+    z-index: 20;
+    filter: drop-shadow(0 0 4px black);
+  }
+
+  .card-count {
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: white;
+    filter: drop-shadow(0 0 4px black);
+    background: rgba(0,0,0,0.6);
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.3);
+    backdrop-filter: blur(4px);
+    margin-top: 6mm;
+  }
+
+  .rarities-box { display: flex; gap: 8px; margin-top: 4mm; background: rgba(0,0,0,0.7); padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1); }
+  .rarity-sm { width: 12px; height: 12px; }
+
+  /* Changed from justify to left to fix the huge spacing issue */
+  .back-text { font-size: 7px; color: #94a3b8; line-height: 1.4; text-align: left; }
+  .back-title { font-size: 9px; font-weight: bold; color: #e2e8f0; margin-bottom: 2mm; text-transform: uppercase; }
+
+</style>
+</head>
+<body>
+  <div class="wrapper-container">
+    <div class="crimp-top"></div>
+    
+    <div class="glue-left"></div>
+    
+    <div class="back-left">
+      <div>
+        <div class="back-title">GLIMMERFALL</div>
+        <div class="back-text">
+          Experience the ultimate battle of magic and strategy.<br><br>
+          Look for Rare and Mythic cards inside!<br><br>
+          *Contains 10 randomly assorted trading cards. specific card drops are completely random and not guaranteed.
+        </div>
+      </div>
+      <div>
+        <div class="back-text" style="text-align: left; padding-left: 2mm; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 2mm;">
+          a Hatake Product<br>
+          First Edition
+        </div>
+      </div>
+    </div>
+    
+    <div class="front-face">
+      <!-- Emberwing Courier art -->
+      <img src="https://res.cloudinary.com/dfyh7cs1g/image/upload/v8/glimmerfall/card_renders/emberwing_courier.png" class="front-art" alt="Art">
+      <div class="art-overlay"></div>
+      
+      <div class="content-z">
+        <img src="file:///home/ewilliamhe/glimmerfall-tcg/glimmerfall-client/public/logo.png" class="logo-img" alt="GlimmerFall Logo">
+        <div class="subtitle">First Edition</div>
+        <div class="series">The Awakening</div>
+        
+        <div class="card-count">10 Trading Cards</div>
+        
+        <div class="rarities-box">
+          <svg class="rarity-sm" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 4px #94a3b8)"><path d="M12 1L23 12L12 23L1 12Z" fill="#94a3b8" stroke="#fff" stroke-width="1"/></svg>
+          <svg class="rarity-sm" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 4px #38bdf8)"><path d="M12 1L23 12L12 23L1 12Z" fill="#38bdf8" stroke="#fff" stroke-width="1"/></svg>
+          <svg class="rarity-sm" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 4px #a855f7)"><path d="M12 1L23 12L12 23L1 12Z" fill="#a855f7" stroke="#fff" stroke-width="1"/></svg>
+          <svg class="rarity-sm" viewBox="0 0 24 24" style="filter: drop-shadow(0 0 4px #eab308)"><path d="M12 1L23 12L12 23L1 12Z" fill="#eab308" stroke="#fff" stroke-width="1"/></svg>
+        </div>
+      </div>
+    </div>
+    
+    <div class="back-right">
+      <div>
+        <div class="back-title" style="text-align: right;">THE AWAKENING</div>
+        <div class="back-text" style="text-align: right;">
+          Gather your forces and prepare for the ultimate test of strength. Will you command the light, or succumb to the void?
+        </div>
+      </div>
+      
+      <!-- Fake Barcode -->
+      <div style="background: white; padding: 2mm; width: 80%; height: 12mm; display: flex; flex-direction: column; align-items: center; justify-content: center; box-sizing: border-box; border-radius: 2px; margin-right: 10mm; margin-left: -4mm;">
+        <div style="width: 100%; height: 6mm; background: repeating-linear-gradient(90deg, black 0px, black 1px, white 1px, white 2px, black 2px, black 4px, white 4px, white 5px);"></div>
+        <div style="font-size: 5px; color: black; font-family: monospace; margin-top: 1mm; font-weight: bold;">0 123456 789012</div>
+      </div>
+    </div>
+    
+    <div class="glue-right"></div>
+    
+    <div class="crimp-bottom"></div>
+  </div>
+</body>
+</html>

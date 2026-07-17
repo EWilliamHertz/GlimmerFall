@@ -26,7 +26,7 @@ function makeToken({ name, power, health, owner, turn, keywords }) {
     name, card_type: 'Entity', cost: 0,
     power, health, currentHealth: health,
     owner, turnSummoned: turn,
-    keywords: { evasive: false, guard: false, overwhelm: false, swift: false, stealth: false, ...keywords },
+    keywords: { evasive: false, guard: false, overwhelm: false, stealth: false, ...keywords },
   };
 }
 
@@ -95,6 +95,30 @@ const DEPLOY_TRIGGERS = {
   'Firstlight Scout': ({ state, owner, logs, clientHints }) => {
     clientHints.scry = 1;
     logs.push(`Firstlight Scout allows you to peek at the top card of your deck.`);
+  },
+  'Deepstone Miner': ({ state, owner, logs, clientHints }) => {
+    clientHints.scry = 1;
+    logs.push(`Deepstone Miner reveals the top card of the deck.`);
+  },
+  'Mind Sculptor': ({ state, owner, logs, clientHints }) => {
+    clientHints.draw = 1;
+    clientHints.scry = 2;
+    logs.push(`Mind Sculptor looks at the top three cards and takes one.`);
+  },
+  'Zenith Inquisitor': ({ state, owner, logs, clientHints }) => {
+    clientHints.draw = 1;
+    logs.push(`Zenith Inquisitor draws a card.`);
+  },
+  'The Nightfall King': ({ state, owner, logs, clientHints }) => {
+    const validTargets = state.graveyard.filter(c => c.owner === owner && c.card_type === 'Entity');
+    if (validTargets.length > 0) {
+      const targetIndex = Math.floor(Math.random() * validTargets.length);
+      const target = validTargets.splice(targetIndex, 1)[0];
+      state.battlefield.push({ ...target, currentHealth: target.health, exhausted: false });
+      logs.push(`The Nightfall King resurrects ${target.name} from the Void!`);
+    } else {
+      logs.push(`The Nightfall King found no Entity in the Void.`);
+    }
   },
 };
 

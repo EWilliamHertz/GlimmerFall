@@ -21,7 +21,7 @@ function EntityDropZone({ id, children }: { id: string, children: React.ReactNod
   );
 }
 
-const isSpell = (card: any) => card?.card_type === 'Rite' || card?.card_type === 'Flash';
+const isSpell = (card: any) => card?.card_type === 'Rite' || card?.card_type === 'Flash' || card?.card_type === 'Relic';
 const isRelic = (card: any) => card?.card_type === 'Relic' || card?.card_type === 'Artifact';
 
 // A spell "requires a target" if its text talks about an entity/creature —
@@ -70,6 +70,7 @@ export default function GameEngine() {
   const [opponentResonance, setOpponentResonance] = useState<any[]>([]);
   const [graveyard, setGraveyard] = useState<any[]>([]);
   const [opponentGraveyard, setOpponentGraveyard] = useState<any[]>([]);
+  const [viewingVoid, setViewingVoid] = useState<{type: string, cards: any[]} | null>(null);
 
   const [energy, setEnergy] = useState(0);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -652,10 +653,10 @@ export default function GameEngine() {
                 </div>
               </div>
               <div className="flex gap-4 items-center">
-                <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800">
+                <div onClick={() => setViewingVoid({ type: 'Enemy', cards: opponentGraveyard })} className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-900 hover:border-cyan-500 transition-colors">
                   <img src="/baked_cardback.png" className="w-6 h-8 rounded object-cover opacity-60 grayscale" />
                   <div className="text-left">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Graveyard</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Void</p>
                     <p className="text-sm text-slate-300 font-mono font-bold">{opponentGraveyard.length}</p>
                   </div>
                 </div>
@@ -781,10 +782,10 @@ export default function GameEngine() {
                   <h3 className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Energy</h3>
                   <p className="text-xl font-black text-yellow-400 font-mono">{energy} / {resonanceRow.length}</p>
                 </div>
-                <div className="ml-auto flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800">
+                <div onClick={() => setViewingVoid({ type: 'Your', cards: graveyard })} className="ml-auto flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-900 hover:border-cyan-500 transition-colors">
                   <img src="/baked_cardback.png" className="w-6 h-8 rounded object-cover opacity-60 grayscale" />
                   <div className="text-left">
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Graveyard</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Void</p>
                     <p className="text-sm text-slate-300 font-mono font-bold">{graveyard.length}</p>
                   </div>
                 </div>
@@ -825,6 +826,25 @@ export default function GameEngine() {
         </div>
 
       </div>
+
+      {viewingVoid && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-8" onClick={() => setViewingVoid(null)}>
+          <div className="bg-slate-900 border border-purple-900/50 p-6 rounded-2xl max-w-5xl w-full max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center mb-6 pb-4 border-b border-purple-900/30">
+              <h2 className="text-2xl font-black text-white tracking-widest uppercase">{viewingVoid.type} Void ({viewingVoid.cards.length})</h2>
+              <button onClick={() => setViewingVoid(null)} className="text-slate-400 hover:text-white px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg font-bold transition-colors">CLOSE</button>
+            </div>
+            <div className="flex flex-wrap gap-6 justify-center">
+              {viewingVoid.cards.length === 0 && <p className="text-slate-500 italic">The void is empty.</p>}
+              {viewingVoid.cards.map((c, i) => (
+                <div key={i} className="transform scale-90 -m-4">
+                  <Card {...c} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       <DragOverlay dropAnimation={null}>
         {activeId ? (

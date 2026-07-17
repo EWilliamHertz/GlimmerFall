@@ -58,6 +58,16 @@ export default async function handler(req, res) {
       // Clear exhaustion and temporary guard for the NEW active player's entities
       const activePlayerNum = match.active_player === match.player1 ? 1 : 2;
       state.battlefield.forEach(c => {
+         // Cleanup end of turn debuffs/buffs
+         if (c.endOfTurnBuffs) {
+           c.endOfTurnBuffs.forEach(buff => {
+             c.power = (c.power || 0) + (buff.power || 0);
+             c.health = (c.health || 0) + (buff.health || 0);
+             c.currentHealth = (c.currentHealth || 0) + (buff.health || 0);
+           });
+           c.endOfTurnBuffs = [];
+         }
+
          if (c.owner === activePlayerNum) {
            c.exhausted = false;
            if (c.temporaryGuard) {
@@ -83,7 +93,7 @@ export default async function handler(req, res) {
         mergeHints(state, clientHints, player);
       } else {
         state.resonanceRow.push({ ...payload.card, owner: player });
-        state.log.unshift(`Player ${player} placed a node.`);
+        state.log.unshift(`Player ${player} placed ${payload.card.name} into the Resonance Row.`);
       }
     } else if (action === 'ATTACK_VANGUARD') {
       const attacker = state.battlefield.find(c => c.id === payload.attackerId);
@@ -171,6 +181,7 @@ export default async function handler(req, res) {
       }
     } else if (action === 'CAST_SPELL') {
       const { card, targetId, targetId2, casterHandSize } = payload;
+      state.log.unshift(`Player ${player} cast ${card.name}.`);
       const { logs, matchOver, clientHints, destroyed } = resolveSpellEffect({ state, player, card, targetId, targetId2, turn: match.current_turn, casterHandSize });
       state.graveyard.push({ id: card.id, name: card.name, card_type: card.card_type, owner: player });
       logs.forEach(l => state.log.unshift(l));
