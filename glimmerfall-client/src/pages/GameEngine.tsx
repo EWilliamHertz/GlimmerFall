@@ -68,8 +68,8 @@ export default function GameEngine() {
   
   const [opponentBattlefield, setOpponentBattlefield] = useState<any[]>([]);
   const [opponentResonance, setOpponentResonance] = useState<any[]>([]);
-  const [graveyard, setGraveyard] = useState<any[]>([]);
-  const [opponentGraveyard, setOpponentGraveyard] = useState<any[]>([]);
+  const [voidZone, setVoidZone] = useState<any[]>([]);
+  const [opponentVoidZone, setOpponentVoidZone] = useState<any[]>([]);
   const [viewingVoid, setViewingVoid] = useState<{type: string, cards: any[]} | null>(null);
 
   const [energy, setEnergy] = useState(0);
@@ -167,9 +167,9 @@ export default function GameEngine() {
       setResonanceRow(state.resonanceRow.filter((c: any) => c.owner === playerNum));
       setOpponentResonance(state.resonanceRow.filter((c: any) => c.owner !== playerNum));
     }
-    if (state.graveyard) {
-      setGraveyard(state.graveyard.filter((c: any) => c.owner === playerNum));
-      setOpponentGraveyard(state.graveyard.filter((c: any) => c.owner !== playerNum));
+    if (state.voidZone) {
+      setVoidZone(state.voidZone.filter((c: any) => c.owner === playerNum));
+      setOpponentVoidZone(state.voidZone.filter((c: any) => c.owner !== playerNum));
     }
 
     // Claim any cards a spell (e.g. Chrono Shift) has returned to our hand
@@ -653,11 +653,11 @@ export default function GameEngine() {
                 </div>
               </div>
               <div className="flex gap-4 items-center">
-                <div onClick={() => setViewingVoid({ type: 'Enemy', cards: opponentGraveyard })} className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-900 hover:border-cyan-500 transition-colors">
+                <div onClick={() => setViewingVoid({ type: 'Enemy', cards: opponentVoidZone })} className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-900 hover:border-cyan-500 transition-colors">
                   <img src="/baked_cardback.png" className="w-6 h-8 rounded object-cover opacity-60 grayscale" />
                   <div className="text-left">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Void</p>
-                    <p className="text-sm text-slate-300 font-mono font-bold">{opponentGraveyard.length}</p>
+                    <p className="text-sm text-slate-300 font-mono font-bold">{opponentVoidZone.length}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800">
@@ -782,11 +782,11 @@ export default function GameEngine() {
                   <h3 className="text-xs font-bold text-yellow-500 uppercase tracking-widest">Energy</h3>
                   <p className="text-xl font-black text-yellow-400 font-mono">{energy} / {resonanceRow.length}</p>
                 </div>
-                <div onClick={() => setViewingVoid({ type: 'Your', cards: graveyard })} className="ml-auto flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-900 hover:border-cyan-500 transition-colors">
+                <div onClick={() => setViewingVoid({ type: 'Your', cards: voidZone })} className="ml-auto flex items-center gap-2 bg-slate-950/60 px-3 py-2 rounded-lg border border-slate-800 cursor-pointer hover:bg-slate-900 hover:border-cyan-500 transition-colors">
                   <img src="/baked_cardback.png" className="w-6 h-8 rounded object-cover opacity-60 grayscale" />
                   <div className="text-left">
                     <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Void</p>
-                    <p className="text-sm text-slate-300 font-mono font-bold">{graveyard.length}</p>
+                    <p className="text-sm text-slate-300 font-mono font-bold">{voidZone.length}</p>
                   </div>
                 </div>
               </div>

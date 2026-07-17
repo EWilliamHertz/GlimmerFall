@@ -38,7 +38,7 @@ export default async function handler(req, res) {
     if (match.status !== 'PLAYING' && match.status !== 'MULLIGAN') throw new Error('Match is over');
 
     let state = match.state;
-    if (!state.graveyard) state.graveyard = [];
+    if (!state.voidZone) state.voidZone = [];
     if (!state.pendingReturns) state.pendingReturns = [];
     if (!state.pendingHints) state.pendingHints = [];
     if (!state.log) state.log = [];
@@ -142,6 +142,15 @@ export default async function handler(req, res) {
         if (target.power && target.power > 0) {
           attacker.currentHealth -= target.power;
           counterDamageStr = ` and took ${target.power} damage back`;
+          if (target.keywords?.lethal) {
+            attacker.currentHealth = 0;
+            state.log.unshift(`${target.name}'s Lethal strike destroys ${attacker.name}!`);
+          }
+        }
+        
+        if (attacker.keywords?.lethal) {
+          target.currentHealth = 0;
+          state.log.unshift(`${attacker.name}'s Lethal strike destroys ${target.name}!`);
         }
         
         state.log.unshift(`Player ${player} dealt ${damage} damage to ${target.name}${counterDamageStr}!`);
@@ -151,7 +160,7 @@ export default async function handler(req, res) {
           state.log.unshift(`${attacker.name} was destroyed in combat!`);
           const attackerIndex = state.battlefield.findIndex(c => c.id === payload.attackerId);
           if (attackerIndex !== -1) state.battlefield.splice(attackerIndex, 1);
-          state.graveyard.push(attacker);
+          state.voidZone.push(attacker);
           const { logs: destroyLogs, clientHints } = resolveDestroyTrigger({ state, entity: attacker, turn: match.current_turn });
           destroyLogs.forEach(l => state.log.unshift(l));
           mergeHints(state, clientHints, player);
@@ -162,7 +171,7 @@ export default async function handler(req, res) {
           state.log.unshift(`${target.name} was destroyed!`);
           const newTargetIndex = state.battlefield.findIndex(c => c.id === payload.targetId);
           if (newTargetIndex !== -1) state.battlefield.splice(newTargetIndex, 1);
-          state.graveyard.push(target);
+          state.voidZone.push(target);
           const { logs: destroyLogs, clientHints } = resolveDestroyTrigger({ state, entity: target, turn: match.current_turn });
           destroyLogs.forEach(l => state.log.unshift(l));
           mergeHints(state, clientHints, player);
@@ -183,7 +192,7 @@ export default async function handler(req, res) {
       const { card, targetId, targetId2, casterHandSize } = payload;
       state.log.unshift(`Player ${player} cast ${card.name}.`);
       const { logs, matchOver, clientHints, destroyed } = resolveSpellEffect({ state, player, card, targetId, targetId2, turn: match.current_turn, casterHandSize });
-      state.graveyard.push({ id: card.id, name: card.name, card_type: card.card_type, owner: player });
+      state.voidZone.push({ id: card.id, name: card.name, card_type: card.card_type, owner: player });
       logs.forEach(l => state.log.unshift(l));
       (destroyed || []).forEach(entity => {
         const { logs: destroyLogs, clientHints: destroyHints } = resolveDestroyTrigger({ state, entity, turn: match.current_turn });

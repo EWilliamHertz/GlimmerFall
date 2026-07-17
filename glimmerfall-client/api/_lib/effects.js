@@ -15,7 +15,7 @@
 //     turn, Reality Fracture's health swap, Verdant Reclaim's Void->hand)
 //
 // Explicitly NOT implemented yet (falls through to a generic "resolves" log,
-// so the card still goes to the graveyard and the game doesn't break — the
+// so the card still goes to the voidZone and the game doesn't break — the
 // stated effect just doesn't happen mechanically):
 //   - Spell countering (Countercurrent, Fading Memory) — needs a priority/stack
 //     system this engine doesn't have
@@ -50,7 +50,7 @@ function destroyEntity(state, entity, logs, destroyed) {
   if (idx === -1) return;
   logs.push(`${entity.name} was destroyed!`);
   const [dead] = state.battlefield.splice(idx, 1);
-  state.graveyard.push(dead);
+  state.voidZone.push(dead);
   if (destroyed) destroyed.push(dead);
 }
 
@@ -94,9 +94,9 @@ const CARD_OVERRIDES = {
     return true;
   },
   'Verdant Reclaim': ({ state, player, card, logs, clientHints }) => {
-    const idx = state.graveyard.findIndex(c => c.owner === player && c.card_type === 'Relic');
+    const idx = state.voidZone.findIndex(c => c.owner === player && c.card_type === 'Relic');
     if (idx === -1) { logs.push(`${card.name} found no Relic in your Void.`); return true; }
-    const [reclaimed] = state.graveyard.splice(idx, 1);
+    const [reclaimed] = state.voidZone.splice(idx, 1);
     clientHints.returnedCardToHand = reclaimed;
     logs.push(`${reclaimed.name} returns from the Void to hand.`);
     return true;
@@ -125,7 +125,7 @@ const CARD_OVERRIDES = {
     const target = findEntity(state, targetId);
     if (!target) { logs.push(`${card.name} needed a valid target.`); return true; }
     destroyEntity(state, target, []); // remove from board without a "destroyed" log
-    state.graveyard.pop(); // it's returning to hand, not the Void — undo the graveyard push
+    state.voidZone.pop(); // it's returning to hand, not the Void — undo the voidZone push
     if (!state.pendingReturns) state.pendingReturns = [];
     const returnId = `ret_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     state.pendingReturns.push({ returnId, owner: target.owner, card: target });
@@ -209,7 +209,7 @@ const CARD_OVERRIDES = {
 };
 
 export function resolveSpellEffect({ state, player, card, targetId, targetId2, turn, casterHandSize }) {
-  if (!state.graveyard) state.graveyard = [];
+  if (!state.voidZone) state.voidZone = [];
   const desc = card.description || '';
   const logs = [];
   const clientHints = { draw: 0, discard: 0, returnedCardToHand: null };

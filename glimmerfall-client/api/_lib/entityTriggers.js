@@ -84,7 +84,7 @@ const DEPLOY_TRIGGERS = {
     }
   },
   'Sepulcher Warden': ({ state, owner, logs, clientHints }) => {
-    const validTargets = state.graveyard.filter(c => c.owner === owner && c.card_type === 'Entity' && c.cost <= 2);
+    const validTargets = state.voidZone.filter(c => c.owner === owner && c.card_type === 'Entity' && c.cost <= 2);
     if (validTargets.length > 0) {
       const targetIndex = Math.floor(Math.random() * validTargets.length);
       const target = validTargets.splice(targetIndex, 1)[0];
@@ -110,7 +110,7 @@ const DEPLOY_TRIGGERS = {
     logs.push(`Zenith Inquisitor draws a card.`);
   },
   'The Nightfall King': ({ state, owner, logs, clientHints }) => {
-    const validTargets = state.graveyard.filter(c => c.owner === owner && c.card_type === 'Entity');
+    const validTargets = state.voidZone.filter(c => c.owner === owner && c.card_type === 'Entity');
     if (validTargets.length > 0) {
       const targetIndex = Math.floor(Math.random() * validTargets.length);
       const target = validTargets.splice(targetIndex, 1)[0];
